@@ -1,5 +1,4 @@
-
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -13,60 +12,91 @@ import { JobCard } from '@/components';
 import { Plus, Search, FileDown, FileUp, Filter } from 'lucide-react';
 import { JobApplication, JobStatus } from '@/utils/types';
 import { staggeredContainer, slideFromTopAnimation } from '@/lib/transitions';
+import { getJobApplications, addJobApplication, updateJobApplication, deleteJobApplication } from '@/lib/api';
+import { useToast } from '@/components/ui/use-toast';
 
 const JobTracker = () => {
-  const [jobs, setJobs] = useState<JobApplication[]>([
-    {
-      _id: '1',
-      companyName: 'Apple Inc.',
-      jobTitle: 'Frontend Developer',
-      applicationDate: '2023-06-15',
-      status: 'Interview Scheduled',
-      location: 'San Francisco, CA',
-      salary: '$120,000 - $150,000',
-      notes: 'Interview scheduled for June 20th at 10:00 AM PST with the hiring manager. Need to prepare portfolio presentation.',
-      successPrediction: 85,
-    },
-    {
-      _id: '2',
-      companyName: 'Google',
-      jobTitle: 'UI/UX Designer',
-      applicationDate: '2023-06-10',
-      status: 'Applied',
-      location: 'Remote',
-      salary: '$100,000 - $130,000',
-      notes: 'Applied through referral from John. Follow up after 1 week.',
-      successPrediction: 65,
-    },
-    {
-      _id: '3',
-      companyName: 'Microsoft',
-      jobTitle: 'Full Stack Developer',
-      applicationDate: '2023-06-05',
-      status: 'Rejected',
-      location: 'Seattle, WA',
-      salary: '$130,000 - $160,000',
-      notes: 'Received rejection email on June 12th. Recruiter mentioned lack of experience with specific technologies.',
-      successPrediction: 30,
-    },
-    {
-      _id: '4',
-      companyName: 'Amazon',
-      jobTitle: 'Senior React Developer',
-      applicationDate: '2023-06-01',
-      status: 'Offer Received',
-      location: 'New York, NY',
-      salary: '$140,000 - $170,000',
-      notes: 'Received offer on June 14th. Need to respond by June 21st. Negotiation possible.',
-      successPrediction: 95,
-    },
-  ]);
-  
+  const [jobs, setJobs] = useState<JobApplication[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [currentJob, setCurrentJob] = useState<JobApplication | null>(null);
-  
+  const [isLoading, setIsLoading] = useState(true);
+  const { toast } = useToast();
+
+  // Fetch jobs on component mount
+  useEffect(() => {
+    fetchJobs();
+  }, []);
+
+  const fetchJobs = async () => {
+    try {
+      setIsLoading(true);
+      const fetchedJobs = await getJobApplications();
+      setJobs(fetchedJobs);
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to fetch job applications",
+        variant: "destructive",
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleAddJob = async (newJob: JobApplication) => {
+    try {
+      if (currentJob && currentJob._id) {
+        // Update existing job
+        const updatedJob = await updateJobApplication(currentJob._id, newJob);
+        setJobs(jobs.map(job => job._id === currentJob._id ? updatedJob : job));
+        toast({
+          title: "Success",
+          description: "Job application updated successfully",
+        });
+      } else {
+        // Add new job
+        const addedJob = await addJobApplication(newJob);
+        setJobs([...jobs, addedJob]);
+        toast({
+          title: "Success",
+          description: "Job application added successfully",
+        });
+      }
+      setCurrentJob(null);
+      setIsDialogOpen(false);
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: currentJob ? "Failed to update job application" : "Failed to add job application",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleDeleteJob = async (id: string) => {
+    try {
+      await deleteJobApplication(id);
+      setJobs(jobs.filter(job => job._id !== id));
+      toast({
+        title: "Success",
+        description: "Job application deleted successfully",
+      });
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to delete job application",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleEditJob = (job: JobApplication) => {
+    setCurrentJob(job);
+    setIsDialogOpen(true);
+  };
+
   const filteredJobs = jobs.filter(job => {
     const matchesSearch = 
       job.companyName.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -76,31 +106,6 @@ const JobTracker = () => {
     
     return matchesSearch && matchesStatus;
   });
-  
-  const handleAddJob = (newJob: JobApplication) => {
-    if (currentJob && currentJob._id) {
-      // Update existing job
-      setJobs(jobs.map(job => 
-        job._id === currentJob._id ? { ...newJob, _id: job._id } : job
-      ));
-    } else {
-      // Add new job
-      const id = Math.random().toString(36).substr(2, 9);
-      setJobs([...jobs, { ...newJob, _id: id }]);
-    }
-    
-    setCurrentJob(null);
-    setIsDialogOpen(false);
-  };
-  
-  const handleDeleteJob = (id: string) => {
-    setJobs(jobs.filter(job => job._id !== id));
-  };
-  
-  const handleEditJob = (job: JobApplication) => {
-    setCurrentJob(job);
-    setIsDialogOpen(true);
-  };
 
   const statusCounts = {
     all: jobs.length,
@@ -316,7 +321,7 @@ const JobFormDialog = ({ isOpen, setIsOpen, onSubmit, job }: JobFormDialogProps)
   });
   
   // Update form when job is set for editing
-  useState(() => {
+  useEffect(() => {
     if (job) {
       setFormData({
         ...job,
@@ -335,7 +340,7 @@ const JobFormDialog = ({ isOpen, setIsOpen, onSubmit, job }: JobFormDialogProps)
         notes: '',
       });
     }
-  });
+  }, [job]);
   
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;

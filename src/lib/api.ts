@@ -1,4 +1,3 @@
-
 // This file would be used for making API calls to your backend service
 // that connects to MongoDB
 
@@ -7,41 +6,55 @@ import { JobApplication, JobPortalCredential, UserSettings } from '@/utils/types
 // Mock implementation for client-side usage
 // In a real app, you would make API calls to your backend
 
+const API_URL = 'http://localhost:5000/api';
+
 // Job Applications API
 export async function getJobApplications(): Promise<JobApplication[]> {
-  // Simulated API call
-  console.log('Simulating API call to fetch job applications');
-  
-  // Return mock data
-  return [
-    {
-      _id: '1',
-      companyName: 'Example Corp',
-      jobTitle: 'Frontend Developer',
-      applicationDate: new Date().toISOString(),
-      status: 'Applied',
-      notes: 'Waiting for response'
-    },
-    {
-      _id: '2',
-      companyName: 'Tech Industries',
-      jobTitle: 'Full Stack Engineer',
-      applicationDate: new Date().toISOString(),
-      status: 'Interview Scheduled',
-      notes: 'First interview on Monday'
-    }
-  ];
+  const response = await fetch(`${API_URL}/jobs`);
+  if (!response.ok) {
+    throw new Error('Failed to fetch job applications');
+  }
+  return response.json();
 }
 
-export async function addJobApplication(jobApplication: JobApplication): Promise<JobApplication | null> {
-  // Simulated API call
-  console.log('Simulating API call to add job application', jobApplication);
+export async function addJobApplication(jobApplication: JobApplication): Promise<JobApplication> {
+  const response = await fetch(`${API_URL}/jobs`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify(jobApplication),
+  });
   
-  // Return the job application with a mock ID
-  return {
-    ...jobApplication,
-    _id: Math.random().toString(36).substring(2, 15)
-  };
+  if (!response.ok) {
+    throw new Error('Failed to add job application');
+  }
+  return response.json();
+}
+
+export async function updateJobApplication(id: string, jobApplication: JobApplication): Promise<JobApplication> {
+  const response = await fetch(`${API_URL}/jobs/${id}`, {
+    method: 'PUT',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify(jobApplication),
+  });
+  
+  if (!response.ok) {
+    throw new Error('Failed to update job application');
+  }
+  return response.json();
+}
+
+export async function deleteJobApplication(id: string): Promise<void> {
+  const response = await fetch(`${API_URL}/jobs/${id}`, {
+    method: 'DELETE',
+  });
+  
+  if (!response.ok) {
+    throw new Error('Failed to delete job application');
+  }
 }
 
 // Job Portal Credentials API
