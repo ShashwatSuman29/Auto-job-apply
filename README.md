@@ -95,9 +95,3 @@ AutoApply is a **SaaS web application** designed to help job seekers **track, ma
 
 ---
 
-## 🔧 Installation & Setup
-
-### **1. Clone the Repository**
-```sh
-git clone https://github.com/yourusername/autoapply.git
-cd autoapply
