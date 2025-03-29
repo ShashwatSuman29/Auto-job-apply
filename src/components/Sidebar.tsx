@@ -1,8 +1,7 @@
-
 import { useState, useEffect } from 'react';
 import { NavLink, useLocation } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { LayoutDashboard, Briefcase, Zap, Key, Settings, ChevronRight, ChevronLeft, LogOut } from 'lucide-react';
+import { LayoutDashboard, Briefcase, Zap, Key, Settings, ChevronRight, ChevronLeft, LogOut, Search } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import { slideFromLeftAnimation, slideFromRightAnimation, easeTransition } from '@/lib/transitions';
@@ -29,7 +28,7 @@ const Sidebar = ({ isOpen, setIsOpen, isMobile }: SidebarProps) => {
   const navItems = [
     { title: 'Dashboard', path: '/', icon: <LayoutDashboard size={20} /> },
     { title: 'Job Tracker', path: '/job-tracker', icon: <Briefcase size={20} /> },
-    { title: 'Auto Apply', path: '/auto-apply', icon: <Zap size={20} /> },
+    { title: 'Job Search', path: '/auto-apply', icon: <Search size={20} /> },
     { title: 'Credentials', path: '/credentials', icon: <Key size={20} /> },
     { title: 'Settings', path: '/settings', icon: <Settings size={20} /> },
   ];
@@ -76,7 +75,7 @@ const Sidebar = ({ isOpen, setIsOpen, isMobile }: SidebarProps) => {
                   variants={slideFromLeftAnimation}
                   transition={easeTransition}
                 >
-                  <span className="text-xl font-semibold">Auto<span className="text-primary">Apply</span></span>
+                  <span className="text-xl font-semibold">Job<span className="text-primary">Pilot</span></span>
                 </motion.div>
               ) : (
                 <motion.div 
@@ -87,7 +86,7 @@ const Sidebar = ({ isOpen, setIsOpen, isMobile }: SidebarProps) => {
                   variants={slideFromLeftAnimation}
                   transition={easeTransition}
                 >
-                  <span className="text-xl font-semibold">A</span>
+                  <span className="text-xl font-semibold">J</span>
                 </motion.div>
               )}
             </AnimatePresence>

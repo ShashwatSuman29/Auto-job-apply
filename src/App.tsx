@@ -11,7 +11,7 @@ import { useEffect } from "react";
 import { Layout } from "@/components";
 import Dashboard from "@/pages/Dashboard";
 import JobTracker from "@/pages/JobTracker";
-import AutoApply from "@/pages/AutoApply";
+import JobSearch from "@/pages/AutoApply";
 import Credentials from "@/pages/Credentials";
 import Settings from "@/pages/Settings";
 import NotFound from "@/pages/NotFound";
@@ -64,7 +64,7 @@ const App = () => (
                 } />
                 <Route path="/auto-apply" element={
                   <Layout>
-                    <AutoApply />
+                    <JobSearch />
                   </Layout>
                 } />
                 <Route path="/credentials" element={

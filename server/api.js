@@ -88,6 +88,33 @@ router.get('/jobs/search', auth, async (req, res) => {
     }
 });
 
+// Get a single job application by ID
+router.get('/jobs/:id', auth, async (req, res) => {
+    try {
+        const db = await connectToDatabase();
+        const { id } = req.params;
+        
+        // Validate ObjectId
+        if (!ObjectId.isValid(id)) {
+            return res.status(400).json({ error: 'Invalid job ID format' });
+        }
+        
+        const job = await db.collection('jobs').findOne({ 
+            _id: new ObjectId(id),
+            user: req.user.id 
+        });
+        
+        if (!job) {
+            return res.status(404).json({ error: 'Job application not found' });
+        }
+        
+        res.json(job);
+    } catch (error) {
+        console.error('Error fetching job by ID:', error);
+        res.status(500).json({ error: 'Failed to fetch job application' });
+    }
+});
+
 // Add a new job application
 router.post('/jobs', auth, async (req, res) => {
     try {

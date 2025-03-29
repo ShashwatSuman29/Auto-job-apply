@@ -15,9 +15,10 @@ import { JobCard } from '@/components';
 import { Plus, Search, FileDown, FileUp, Filter, Calendar as CalendarIcon, X } from 'lucide-react';
 import { JobApplication, JobStatus } from '@/utils/types';
 import { staggeredContainer, slideFromTopAnimation } from '@/lib/transitions';
-import { getJobApplications, addJobApplication, updateJobApplication, deleteJobApplication, searchJobApplications, JobSearchParams } from '@/lib/api';
+import { getJobApplications, addJobApplication, updateJobApplication, deleteJobApplication, searchJobApplications, JobSearchParams, getJobApplicationById } from '@/lib/api';
 import { useToast } from '@/components/ui/use-toast';
 import { cn } from '@/lib/utils';
+import { useLocation, useNavigate } from 'react-router-dom';
 
 const JobTracker = () => {
   const [jobs, setJobs] = useState<JobApplication[]>([]);
@@ -33,11 +34,43 @@ const JobTracker = () => {
   const [activeTab, setActiveTab] = useState('all');
   const searchTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const { toast } = useToast();
+  const location = useLocation();
+  const navigate = useNavigate();
 
   // Fetch jobs on component mount
   useEffect(() => {
     fetchJobs();
   }, []);
+
+  // Check for jobId in URL query params
+  useEffect(() => {
+    const queryParams = new URLSearchParams(location.search);
+    const jobId = queryParams.get('jobId');
+    
+    if (jobId) {
+      fetchJobById(jobId);
+      // Clear the jobId from URL to avoid reopening on refresh
+      navigate('/job-tracker', { replace: true });
+    }
+  }, [location.search]);
+
+  // Fetch job by ID and open details dialog
+  const fetchJobById = async (jobId: string) => {
+    try {
+      const job = await getJobApplicationById(jobId);
+      if (job) {
+        setCurrentJob(job);
+        setIsDialogOpen(true);
+      }
+    } catch (error) {
+      console.error('Error fetching job by ID:', error);
+      toast({
+        title: "Error",
+        description: "Failed to fetch job application details",
+        variant: "destructive",
+      });
+    }
+  };
 
   // Effect to handle search when filters change
   useEffect(() => {

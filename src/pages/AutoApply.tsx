@@ -46,41 +46,49 @@ import {
 
 // Define types for auto-apply sessions
 interface AutoApplyJob {
+  id: string;
   title: string;
   company: string;
   location: string;
+  salary?: string;
+  description: string;
   url: string;
+  date: string;
   source: string;
-  status: 'found' | 'applied' | 'skipped' | 'error';
-  foundAt: Date;
-  updatedAt?: Date;
+  applied: boolean;
 }
 
 interface AutoApplyLog {
-  time: Date;
+  timestamp: string;
   message: string;
-  type: 'info' | 'success' | 'warning' | 'error';
+  type: 'info' | 'success' | 'error' | 'warning';
 }
 
 interface AutoApplySession {
   _id: string;
   userId: string;
-  status: 'running' | 'completed' | 'stopped' | 'error';
-  jobTitles: string[];
-  locations: string[];
-  salaryRange: {
-    min: number;
-    max: number;
+  status: 'running' | 'completed' | 'failed' | 'stopped';
+  searchCriteria: {
+    keywords: string;
+    location: string;
+    jobSites: string[];
   };
-  excludeCompanies: string[];
-  includeRemote: boolean;
-  jobsFound: number;
-  applicationsSubmitted: number;
-  applicationsSkipped: number;
-  startTime: Date;
-  lastUpdateTime: Date;
+  startTime: string;
+  endTime?: string;
+  stats: {
+    jobsFound: number;
+    applicationsSubmitted: number;
+    errors: number;
+    applicationsSkipped: number;
+  };
   logs: AutoApplyLog[];
   jobs: AutoApplyJob[];
+}
+
+interface JobSourceOption {
+  value: string;
+  label: string;
+  icon: React.ReactNode;
 }
 
 // Define type for job listings
@@ -99,7 +107,7 @@ interface JobListing {
   experienceLevel: string;
 }
 
-const AutoApply = () => {
+const JobSearch = () => {
   const { isAuthenticated, user } = useAuth();
   const { toast } = useToast();
   
@@ -433,11 +441,102 @@ const AutoApply = () => {
     }
   };
 
+  const renderSessionStats = (session: AutoApplySession) => {
+    return (
+      <div className="grid grid-cols-3 gap-4 mb-4">
+        <Card>
+          <CardContent className="pt-6">
+            <div className="text-center">
+              <div className="text-2xl font-bold">
+                {session.stats.jobsFound}
+              </div>
+              <p className="text-sm text-muted-foreground">Jobs Found</p>
+            </div>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="pt-6">
+            <div className="text-center">
+              <div className="text-2xl font-bold">
+                {session.stats.applicationsSubmitted}
+              </div>
+              <p className="text-sm text-muted-foreground">Applications Submitted</p>
+            </div>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="pt-6">
+            <div className="text-center">
+              <div className="text-2xl font-bold">
+                {session.stats.errors}
+              </div>
+              <p className="text-sm text-muted-foreground">Errors</p>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  };
+
+  const renderSessionDetails = (session: AutoApplySession) => {
+    return (
+      <Card className="mb-4">
+        <CardHeader>
+          <CardTitle>Session Details</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="space-y-4">
+            <div>
+              <h4 className="font-medium mb-2">Status</h4>
+              <Badge 
+                className={
+                  session.status === 'running' ? 'bg-blue-500' : 
+                  session.status === 'completed' ? 'bg-green-500' : 
+                  session.status === 'failed' ? 'bg-red-500' : 'bg-yellow-500'
+                }
+              >
+                {session.status.charAt(0).toUpperCase() + session.status.slice(1)}
+              </Badge>
+            </div>
+            <div>
+              <h4 className="font-medium mb-2">Search Criteria</h4>
+              <div className="grid grid-cols-2 gap-2">
+                <div>
+                  <p className="text-sm font-medium">Keywords:</p>
+                  <p className="text-sm text-muted-foreground">{session.searchCriteria.keywords}</p>
+                </div>
+                <div>
+                  <p className="text-sm font-medium">Location:</p>
+                  <p className="text-sm text-muted-foreground">{session.searchCriteria.location}</p>
+                </div>
+              </div>
+            </div>
+            <div>
+              <h4 className="font-medium mb-2">Timeline</h4>
+              <div className="grid grid-cols-2 gap-2">
+                <div>
+                  <p className="text-sm font-medium">Started:</p>
+                  <p className="text-sm text-muted-foreground">{new Date(session.startTime).toLocaleString()}</p>
+                </div>
+                {session.endTime && (
+                  <div>
+                    <p className="text-sm font-medium">Ended:</p>
+                    <p className="text-sm text-muted-foreground">{new Date(session.endTime).toLocaleString()}</p>
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+    );
+  };
+
   return (
     <div className="container mx-auto space-y-6">
       <div className="flex justify-between items-center">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight">Auto Apply</h1>
+          <h1 className="text-3xl font-bold tracking-tight">Job Search</h1>
           <p className="text-muted-foreground">
             Automate your job application process
           </p>
@@ -769,20 +868,7 @@ const AutoApply = () => {
                 </div>
               </CardHeader>
               <CardContent className="space-y-4">
-                <div className="grid gap-4 md:grid-cols-3">
-                  <div className="bg-muted rounded-lg p-4 text-center">
-                    <h3 className="text-sm font-medium text-muted-foreground">Jobs Found</h3>
-                    <p className="text-2xl font-bold">{activeSession.jobsFound}</p>
-                  </div>
-                  <div className="bg-muted rounded-lg p-4 text-center">
-                    <h3 className="text-sm font-medium text-muted-foreground">Applications Submitted</h3>
-                    <p className="text-2xl font-bold">{activeSession.applicationsSubmitted}</p>
-                  </div>
-                  <div className="bg-muted rounded-lg p-4 text-center">
-                    <h3 className="text-sm font-medium text-muted-foreground">Applications Skipped</h3>
-                    <p className="text-2xl font-bold">{activeSession.applicationsSkipped}</p>
-                  </div>
-                </div>
+                {renderSessionStats(activeSession)}
                 
                 {activeSession.status === 'running' && (
                   <Button 
@@ -839,25 +925,25 @@ const AutoApply = () => {
                           </p>
                         </div>
                         <div className="text-right">
-                          <p className="text-sm font-medium">{session.applicationsSubmitted} Applied</p>
-                          <p className="text-xs text-muted-foreground">{session.jobsFound} Jobs Found</p>
+                          <p className="text-sm font-medium">{session.stats.applicationsSubmitted} Applied</p>
+                          <p className="text-xs text-muted-foreground">{session.stats.jobsFound} Jobs Found</p>
                         </div>
                       </div>
                       
                       <div className="grid grid-cols-2 gap-2 text-sm">
                         <div className="flex items-center">
                           <Briefcase className="h-4 w-4 mr-1 text-muted-foreground" />
-                          <span className="truncate">{session.jobTitles.join(', ')}</span>
+                          <span className="truncate">{session.searchCriteria.keywords}</span>
                         </div>
                         <div className="flex items-center">
                           <MapPin className="h-4 w-4 mr-1 text-muted-foreground" />
-                          <span className="truncate">{session.locations.join(', ')}</span>
+                          <span className="truncate">{session.searchCriteria.location}</span>
                         </div>
                       </div>
                       
                       <div className="flex justify-between items-center text-xs text-muted-foreground">
                         <span>Duration: {
-                          Math.round((new Date(session.lastUpdateTime).getTime() - new Date(session.startTime).getTime()) / 60000)
+                          Math.round((new Date(session.endTime || session.startTime).getTime() - new Date(session.startTime).getTime()) / 60000)
                         } minutes</span>
                         <span>{session.logs.length} log entries</span>
                       </div>
@@ -880,4 +966,4 @@ const AutoApply = () => {
   );
 };
 
-export default AutoApply;
+export default JobSearch;

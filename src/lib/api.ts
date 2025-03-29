@@ -53,7 +53,7 @@ export async function getJobApplications(): Promise<JobApplication[]> {
       throw new Error(errorData.error || 'Failed to fetch job applications');
     }
     
-    return response.json();
+    return await response.json();
   } catch (error) {
     console.error('Error fetching job applications:', error);
     try {
@@ -68,13 +68,56 @@ export async function getJobApplications(): Promise<JobApplication[]> {
         });
         
         if (!response.ok) {
-          throw new Error('Failed to fetch job applications');
+          const errorData = await response.json();
+          throw new Error(errorData.error || 'Failed to fetch job applications');
         }
         
-        return response.json();
+        return await response.json();
       }
     } catch (refreshError) {
-      throw refreshError;
+      console.error('Error refreshing token:', refreshError);
+    }
+    throw error;
+  }
+}
+
+export async function getJobApplicationById(jobId: string): Promise<JobApplication | null> {
+  try {
+    const token = await getAuthToken();
+    const response = await fetch(`${API_URL}/jobs/${jobId}`, {
+      headers: {
+        'x-auth-token': token
+      }
+    });
+    
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.error || 'Failed to fetch job application');
+    }
+    
+    return await response.json();
+  } catch (error) {
+    console.error(`Error fetching job application with ID ${jobId}:`, error);
+    try {
+      // Try to refresh token if needed
+      const newToken = await refreshTokenIfNeeded(error);
+      if (newToken) {
+        // Retry the request with new token
+        const response = await fetch(`${API_URL}/jobs/${jobId}`, {
+          headers: {
+            'x-auth-token': newToken
+          }
+        });
+        
+        if (!response.ok) {
+          const errorData = await response.json();
+          throw new Error(errorData.error || 'Failed to fetch job application');
+        }
+        
+        return await response.json();
+      }
+    } catch (refreshError) {
+      console.error('Error refreshing token:', refreshError);
     }
     throw error;
   }
@@ -176,7 +219,7 @@ export async function addJobApplication(jobApplication: JobApplication): Promise
       const errorData = await response.json();
       throw new Error(errorData.error || 'Failed to add job application');
     }
-    return response.json();
+    return await response.json();
   } catch (error) {
     console.error('Error adding job application:', error);
     try {
@@ -198,7 +241,7 @@ export async function addJobApplication(jobApplication: JobApplication): Promise
           throw new Error(errorData.error || 'Failed to add job application');
         }
         
-        return response.json();
+        return await response.json();
       }
     } catch (refreshError) {
       throw refreshError;
@@ -223,7 +266,7 @@ export async function updateJobApplication(id: string, jobApplication: JobApplic
       const errorData = await response.json();
       throw new Error(errorData.error || 'Failed to update job application');
     }
-    return response.json();
+    return await response.json();
   } catch (error) {
     console.error('Error updating job application:', error);
     try {
@@ -245,7 +288,7 @@ export async function updateJobApplication(id: string, jobApplication: JobApplic
           throw new Error(errorData.error || 'Failed to update job application');
         }
         
-        return response.json();
+        return await response.json();
       }
     } catch (refreshError) {
       throw refreshError;
@@ -471,7 +514,7 @@ export async function updateJobPortalCredential(id: string, credential: JobPorta
       throw new Error(errorData.error || 'Failed to update credential');
     }
     
-    return response.json();
+    return await response.json();
   } catch (error) {
     console.error('Error updating credential:', error);
     try {
@@ -493,7 +536,7 @@ export async function updateJobPortalCredential(id: string, credential: JobPorta
           throw new Error(errorData.error || 'Failed to update credential');
         }
         
-        return response.json();
+        return await response.json();
       }
     } catch (refreshError) {
       throw refreshError;
