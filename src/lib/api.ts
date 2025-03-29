@@ -1,7 +1,7 @@
 // This file would be used for making API calls to your backend service
 // that connects to MongoDB
 
-import { JobApplication, JobPortalCredential, UserSettings } from '@/utils/types';
+import { JobApplication, JobPortalCredential, UserSettings, UserProfile } from '@/utils/types';
 import { useAuth } from '../context/AuthContext';
 
 // Mock implementation for client-side usage
@@ -491,4 +491,177 @@ export async function updateUserSettings(settings: UserSettings): Promise<UserSe
   
   // Return the updated settings
   return settings;
+}
+
+// User Profile API
+export async function getUserProfile(): Promise<UserProfile> {
+  try {
+    const token = await getAuthToken();
+    console.log('Fetching user profile with token:', token.substring(0, 10) + '...');
+    
+    const response = await fetch(`${API_URL}/profile`, {
+      headers: {
+        'x-auth-token': token
+      }
+    });
+
+    // Check if response is ok before trying to parse JSON
+    if (!response.ok) {
+      // If profile not found (404), return empty profile
+      if (response.status === 404) {
+        console.log('Profile not found, returning empty profile');
+        return {
+          name: '',
+          email: '',
+          title: '',
+          skills: [],
+          experience: [],
+          education: []
+        };
+      }
+      
+      // Try to parse error message if possible
+      let errorMessage = 'Failed to fetch profile';
+      try {
+        const errorData = await response.json();
+        errorMessage = errorData.error || errorMessage;
+      } catch (parseError) {
+        console.error('Error parsing error response:', parseError);
+      }
+      
+      throw new Error(errorMessage);
+    }
+    
+    const data = await response.json();
+    console.log('Retrieved profile from API:', data);
+    
+    return data;
+  } catch (error) {
+    console.error('Error fetching profile:', error);
+    
+    // Return empty profile on error
+    return {
+      name: '',
+      email: '',
+      title: '',
+      skills: [],
+      experience: [],
+      education: []
+    };
+  }
+}
+
+export async function updateUserProfile(profileData: UserProfile): Promise<UserProfile> {
+  try {
+    const token = await getAuthToken();
+    console.log('Updating user profile:', profileData);
+    
+    const response = await fetch(`${API_URL}/profile`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-auth-token': token
+      },
+      body: JSON.stringify(profileData)
+    });
+
+    // Check if response is ok before trying to parse JSON
+    if (!response.ok) {
+      // Try to parse error message if possible
+      let errorMessage = 'Failed to update profile';
+      try {
+        const errorData = await response.json();
+        errorMessage = errorData.error || errorMessage;
+      } catch (parseError) {
+        console.error('Error parsing error response:', parseError);
+      }
+      
+      throw new Error(errorMessage);
+    }
+    
+    const data = await response.json();
+    console.log('Profile updated successfully:', data);
+    
+    return data;
+  } catch (error) {
+    console.error('Error updating profile:', error);
+    throw error;
+  }
+}
+
+export async function uploadResume(file: File): Promise<{ resumeUrl: string, resumeOriginalName: string }> {
+  try {
+    const token = await getAuthToken();
+    console.log('Uploading resume:', file.name);
+    
+    const formData = new FormData();
+    formData.append('resume', file);
+    
+    const response = await fetch(`${API_URL}/profile/resume`, {
+      method: 'POST',
+      headers: {
+        'x-auth-token': token
+        // Don't set Content-Type header when using FormData, browser will set it automatically with boundary
+      },
+      body: formData
+    });
+
+    // Check if response is ok before trying to parse JSON
+    if (!response.ok) {
+      // Try to parse error message if possible
+      let errorMessage = 'Failed to upload resume';
+      try {
+        const errorData = await response.json();
+        errorMessage = errorData.error || errorMessage;
+      } catch (parseError) {
+        console.error('Error parsing error response:', parseError);
+      }
+      
+      throw new Error(errorMessage);
+    }
+    
+    const data = await response.json();
+    console.log('Resume uploaded successfully:', data);
+    
+    return {
+      resumeUrl: data.resumeUrl,
+      resumeOriginalName: data.resumeOriginalName
+    };
+  } catch (error) {
+    console.error('Error uploading resume:', error);
+    throw error;
+  }
+}
+
+export async function deleteResume(): Promise<void> {
+  try {
+    const token = await getAuthToken();
+    console.log('Deleting resume');
+    
+    const response = await fetch(`${API_URL}/profile/resume`, {
+      method: 'DELETE',
+      headers: {
+        'x-auth-token': token
+      }
+    });
+
+    // Check if response is ok before trying to parse JSON
+    if (!response.ok) {
+      // Try to parse error message if possible
+      let errorMessage = 'Failed to delete resume';
+      try {
+        const errorData = await response.json();
+        errorMessage = errorData.error || errorMessage;
+      } catch (parseError) {
+        console.error('Error parsing error response:', parseError);
+      }
+      
+      throw new Error(errorMessage);
+    }
+    
+    console.log('Resume deleted successfully');
+  } catch (error) {
+    console.error('Error deleting resume:', error);
+    throw error;
+  }
 }

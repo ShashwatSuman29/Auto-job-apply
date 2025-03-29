@@ -1,4 +1,3 @@
-
 // Job application related types
 export type JobStatus = 'Applied' | 'Interview Scheduled' | 'Offer Received' | 'Rejected' | 'Saved';
 
@@ -50,6 +49,7 @@ export interface UserSettings {
 // User profile
 export interface UserProfile {
   _id?: string;
+  userId?: string;
   name: string;
   email: string;
   profilePictureUrl?: string;
@@ -57,6 +57,11 @@ export interface UserProfile {
   skills?: string[];
   experience?: string[];
   education?: string[];
+  resumeUrl?: string;
+  resumeOriginalName?: string;
+  resumeUpdatedAt?: Date | string;
+  createdAt?: Date | string;
+  updatedAt?: Date | string;
 }
 
 // Navigation item

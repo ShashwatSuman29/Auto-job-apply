@@ -1,5 +1,4 @@
-
-import { useState } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { motion } from 'framer-motion';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -13,26 +12,30 @@ import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import { useTheme } from '@/context/ThemeContext';
 import { slideFromTopAnimation } from '@/lib/transitions';
-import { Bell, User, Cog, Mail, Moon, Sun, Upload, Trash2, Palette, ChevronRight } from 'lucide-react';
+import { Bell, User, Cog, Mail, Moon, Sun, Upload, Trash2, Palette, ChevronRight, Loader2 } from 'lucide-react';
 import { UserSettings, UserProfile } from '@/utils/types';
-import { toast } from '@/hooks/use-toast';
+import { useToast } from '@/components/ui/use-toast';
+import { useAuth } from '@/context/AuthContext';
+import { getUserProfile, updateUserProfile, uploadResume, deleteResume, updateUserSettings } from '@/lib/api';
 
 const Settings = () => {
   const { theme, toggleTheme } = useTheme();
+  const { toast } = useToast();
+  const { isAuthenticated, user } = useAuth();
+  const fileInputRef = useRef<HTMLInputElement>(null);
   
   const [profile, setProfile] = useState<UserProfile>({
-    _id: '1',
-    name: 'John Doe',
-    email: 'john.doe@example.com',
-    title: 'Frontend Developer',
-    skills: ['React', 'TypeScript', 'UI/UX Design'],
-    experience: ['Software Engineer at TechCorp (2019-2022)', 'Frontend Developer at WebSolutions (2022-Present)'],
-    education: ['B.S. Computer Science, University of Technology (2015-2019)'],
+    name: '',
+    email: '',
+    title: '',
+    skills: [],
+    experience: [],
+    education: [],
   });
   
   const [settings, setSettings] = useState<UserSettings>({
-    _id: '1',
-    userId: '1',
+    _id: '',
+    userId: '',
     darkMode: theme === 'dark',
     emailNotifications: true,
     autoApplyPreferences: {
@@ -45,15 +48,98 @@ const Settings = () => {
       excludeCompanies: ['TechGiant Inc'],
       includeRemote: true,
     },
-    resumeUrl: 'resume_john_doe.pdf',
+    resumeUrl: '',
   });
   
-  const updateProfile = (e: React.FormEvent) => {
+  const [isLoading, setIsLoading] = useState(true);
+  const [isProfileUpdating, setIsProfileUpdating] = useState(false);
+  const [isSettingsUpdating, setIsSettingsUpdating] = useState(false);
+  const [isPasswordUpdating, setIsPasswordUpdating] = useState(false);
+  const [isResumeUploading, setIsResumeUploading] = useState(false);
+  
+  // Fetch user profile and settings when component mounts
+  useEffect(() => {
+    if (isAuthenticated && user) {
+      fetchUserProfile();
+    } else {
+      setIsLoading(false);
+    }
+  }, [isAuthenticated, user]);
+  
+  const fetchUserProfile = async () => {
+    try {
+      setIsLoading(true);
+      console.log('Fetching user profile...');
+      
+      const profileData = await getUserProfile();
+      console.log('Profile data:', profileData);
+      
+      if (profileData) {
+        setProfile(profileData);
+      }
+      
+      // TODO: Fetch user settings when that API is implemented
+      
+    } catch (error) {
+      console.error('Error fetching user data:', error);
+      toast({
+        title: "Error",
+        description: "Failed to load your profile. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
+  
+  const updateProfile = async (e: React.FormEvent) => {
     e.preventDefault();
-    toast({
-      title: "Profile Updated",
-      description: "Your profile has been successfully updated",
-    });
+    
+    if (!isAuthenticated) {
+      toast({
+        title: "Authentication Required",
+        description: "Please log in to update your profile",
+        variant: "destructive",
+      });
+      return;
+    }
+    
+    try {
+      setIsProfileUpdating(true);
+      
+      // Ensure required fields are filled
+      if (!profile.name || !profile.email) {
+        toast({
+          title: "Missing Information",
+          description: "Name and email are required",
+          variant: "destructive",
+        });
+        return;
+      }
+      
+      const updatedProfile = await updateUserProfile(profile);
+      setProfile(updatedProfile);
+      
+      toast({
+        title: "Profile Updated",
+        description: "Your profile has been successfully updated",
+      });
+    } catch (error) {
+      console.error('Error updating profile:', error);
+      
+      let errorMessage = "Failed to update profile";
+      if (error instanceof Error) {
+        errorMessage = error.message;
+      }
+      
+      toast({
+        title: "Error",
+        description: errorMessage,
+        variant: "destructive",
+      });
+    } finally {
+      setIsProfileUpdating(false);
+    }
   };
   
   const updateSettings = (e: React.FormEvent) => {
@@ -79,6 +165,113 @@ const Settings = () => {
       darkMode: !prev.darkMode,
     }));
   };
+  
+  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    
+    try {
+      setIsResumeUploading(true);
+      
+      // Validate file size (5MB max)
+      if (file.size > 5 * 1024 * 1024) {
+        toast({
+          title: "File Too Large",
+          description: "Resume file must be less than 5MB",
+          variant: "destructive",
+        });
+        return;
+      }
+      
+      // Validate file type
+      const allowedTypes = ['.pdf', '.doc', '.docx', '.txt'];
+      const fileExt = file.name.substring(file.name.lastIndexOf('.')).toLowerCase();
+      
+      if (!allowedTypes.includes(fileExt)) {
+        toast({
+          title: "Invalid File Type",
+          description: "Only PDF, DOC, DOCX, and TXT files are allowed",
+          variant: "destructive",
+        });
+        return;
+      }
+      
+      const result = await uploadResume(file);
+      
+      setProfile(prev => ({
+        ...prev,
+        resumeUrl: result.resumeUrl,
+        resumeOriginalName: result.resumeOriginalName
+      }));
+      
+      toast({
+        title: "Resume Uploaded",
+        description: "Your resume has been successfully uploaded",
+      });
+    } catch (error) {
+      console.error('Error uploading resume:', error);
+      
+      let errorMessage = "Failed to upload resume";
+      if (error instanceof Error) {
+        errorMessage = error.message;
+      }
+      
+      toast({
+        title: "Error",
+        description: errorMessage,
+        variant: "destructive",
+      });
+    } finally {
+      setIsResumeUploading(false);
+      // Reset file input
+      if (fileInputRef.current) {
+        fileInputRef.current.value = '';
+      }
+    }
+  };
+  
+  const handleDeleteResume = async () => {
+    try {
+      setIsResumeUploading(true);
+      
+      await deleteResume();
+      
+      setProfile(prev => ({
+        ...prev,
+        resumeUrl: undefined,
+        resumeOriginalName: undefined
+      }));
+      
+      toast({
+        title: "Resume Deleted",
+        description: "Your resume has been successfully deleted",
+      });
+    } catch (error) {
+      console.error('Error deleting resume:', error);
+      
+      let errorMessage = "Failed to delete resume";
+      if (error instanceof Error) {
+        errorMessage = error.message;
+      }
+      
+      toast({
+        title: "Error",
+        description: errorMessage,
+        variant: "destructive",
+      });
+    } finally {
+      setIsResumeUploading(false);
+    }
+  };
+  
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center h-[calc(100vh-200px)]">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+        <span className="ml-2">Loading your profile...</span>
+      </div>
+    );
+  }
   
   return (
     <div className="space-y-6">
@@ -177,31 +370,46 @@ const Settings = () => {
                   <div className="space-y-2">
                     <Label htmlFor="resume">Resume</Label>
                     <div className="flex gap-2">
-                      <Input
+                      <input
+                        ref={fileInputRef}
                         id="resume"
                         type="file"
                         className="hidden"
+                        onChange={handleFileChange}
+                        accept=".pdf,.doc,.docx,.txt"
                       />
                       <Button
                         type="button"
                         variant="outline"
                         className="w-full justify-start text-muted-foreground"
-                        onClick={() => document.getElementById('resume')?.click()}
+                        onClick={() => fileInputRef.current?.click()}
+                        disabled={isResumeUploading}
                       >
-                        <Upload className="h-4 w-4 mr-2" />
-                        {settings.resumeUrl ? 'Replace current resume' : 'Upload resume'}
+                        {isResumeUploading ? (
+                          <>
+                            <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                            Uploading...
+                          </>
+                        ) : (
+                          <>
+                            <Upload className="h-4 w-4 mr-2" />
+                            {profile.resumeUrl ? 'Replace current resume' : 'Upload resume'}
+                          </>
+                        )}
                       </Button>
                     </div>
-                    {settings.resumeUrl && (
-                      <div className="flex items-center justify-between text-sm mt-2">
-                        <span className="text-muted-foreground">{settings.resumeUrl}</span>
+                    {profile.resumeUrl && profile.resumeOriginalName && (
+                      <div className="flex items-center justify-between text-sm mt-2 p-2 border rounded bg-muted">
+                        <span className="text-muted-foreground truncate">{profile.resumeOriginalName}</span>
                         <Button
                           type="button"
                           variant="ghost"
                           size="icon"
                           className="h-6 w-6 text-destructive"
+                          onClick={handleDeleteResume}
+                          disabled={isResumeUploading}
                         >
-                          <Trash2 className="h-4 w-4" />
+                          {isResumeUploading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Trash2 className="h-4 w-4" />}
                         </Button>
                       </div>
                     )}
@@ -240,8 +448,18 @@ const Settings = () => {
                   />
                 </div>
                 
-                <Button type="submit">
-                  Save Profile
+                <Button 
+                  type="submit"
+                  disabled={isProfileUpdating}
+                >
+                  {isProfileUpdating ? (
+                    <>
+                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                      Saving...
+                    </>
+                  ) : (
+                    'Save Profile'
+                  )}
                 </Button>
               </form>
             </CardContent>
