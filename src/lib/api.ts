@@ -463,34 +463,93 @@ export async function deleteJobPortalCredential(id: string): Promise<void> {
 }
 
 // User Settings API
-export async function getUserSettings(userId: string): Promise<UserSettings | null> {
-  // Simulated API call
-  console.log('Simulating API call to fetch user settings', userId);
-  
-  // Return mock data
-  return {
-    userId,
-    emailNotifications: true,
-    darkMode: true,
-    autoApplyPreferences: {
-      jobTitles: ['Software Engineer', 'Frontend Developer'],
-      locations: ['Remote', 'New York'],
-      salaryRange: {
-        min: 80000,
-        max: 150000
-      },
-      excludeCompanies: ['Company X', 'Company Y'],
-      includeRemote: true
+export async function getUserSettings(): Promise<UserSettings> {
+  try {
+    const token = await getAuthToken();
+    console.log('Fetching user settings with token:', token.substring(0, 10) + '...');
+    
+    const response = await fetch(`${API_URL}/settings`, {
+      headers: {
+        'x-auth-token': token
+      }
+    });
+
+    // Check if response is ok before trying to parse JSON
+    if (!response.ok) {
+      // Try to parse error message if possible
+      let errorMessage = 'Failed to fetch settings';
+      try {
+        const errorData = await response.json();
+        errorMessage = errorData.error || errorMessage;
+      } catch (parseError) {
+        console.error('Error parsing error response:', parseError);
+      }
+      
+      throw new Error(errorMessage);
     }
-  };
+    
+    const data = await response.json();
+    console.log('Retrieved settings from API:', data);
+    
+    return data;
+  } catch (error) {
+    console.error('Error fetching settings:', error);
+    
+    // Return default settings on error
+    return {
+      userId: '',
+      darkMode: false,
+      emailNotifications: true,
+      autoApplyPreferences: {
+        jobTitles: [],
+        locations: [],
+        salaryRange: {
+          min: 0,
+          max: 0
+        },
+        excludeCompanies: [],
+        includeRemote: true
+      }
+    };
+  }
 }
 
-export async function updateUserSettings(settings: UserSettings): Promise<UserSettings | null> {
-  // Simulated API call
-  console.log('Simulating API call to update user settings', settings);
-  
-  // Return the updated settings
-  return settings;
+export async function updateUserSettings(settingsData: UserSettings): Promise<UserSettings> {
+  try {
+    const token = await getAuthToken();
+    console.log('Updating user settings:', settingsData);
+    
+    const response = await fetch(`${API_URL}/settings`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-auth-token': token
+      },
+      body: JSON.stringify(settingsData)
+    });
+
+    // Check if response is ok before trying to parse JSON
+    if (!response.ok) {
+      // Try to parse error message if possible
+      let errorMessage = 'Failed to update settings';
+      try {
+        const errorData = await response.json();
+        errorMessage = errorData.error || errorMessage;
+      } catch (parseError) {
+        console.error('Error parsing error response:', parseError);
+      }
+      
+      throw new Error(errorMessage);
+    }
+    
+    const data = await response.json();
+    console.log('Settings updated successfully:', data);
+    
+    return data;
+  } catch (error) {
+    console.error('Error updating settings:', error);
+    throw error;
+  }
 }
 
 // User Profile API
@@ -662,6 +721,147 @@ export async function deleteResume(): Promise<void> {
     console.log('Resume deleted successfully');
   } catch (error) {
     console.error('Error deleting resume:', error);
+    throw error;
+  }
+}
+
+// Auto Apply API
+export async function startAutoApplySession(searchCriteria: {
+  jobTitles: string[];
+  locations: string[];
+  salaryRange: { min: number; max: number };
+  excludeCompanies: string[];
+  includeRemote: boolean;
+}) {
+  try {
+    const token = await getAuthToken();
+    console.log('Starting auto-apply session with criteria:', searchCriteria);
+    
+    // Fix the URL to match server route configuration
+    const response = await fetch(`${API_URL}/auto-apply/start`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-auth-token': token
+      },
+      body: JSON.stringify(searchCriteria)
+    });
+
+    if (!response.ok) {
+      let errorMessage = 'Failed to start auto-apply session';
+      try {
+        const errorData = await response.json();
+        errorMessage = errorData.error || errorMessage;
+      } catch (parseError) {
+        console.error('Error parsing error response:', parseError);
+      }
+      
+      throw new Error(errorMessage);
+    }
+    
+    const data = await response.json();
+    console.log('Auto-apply session started:', data);
+    
+    return data;
+  } catch (error) {
+    console.error('Error starting auto-apply session:', error);
+    throw error;
+  }
+}
+
+export async function getAutoApplySessionStatus(sessionId: string) {
+  try {
+    const token = await getAuthToken();
+    console.log('Getting auto-apply session status for session:', sessionId);
+    
+    // Fix the URL to match server route configuration
+    const response = await fetch(`${API_URL}/auto-apply/status/${sessionId}`, {
+      headers: {
+        'x-auth-token': token
+      }
+    });
+
+    if (!response.ok) {
+      let errorMessage = 'Failed to get auto-apply session status';
+      try {
+        const errorData = await response.json();
+        errorMessage = errorData.error || errorMessage;
+      } catch (parseError) {
+        console.error('Error parsing error response:', parseError);
+      }
+      
+      throw new Error(errorMessage);
+    }
+    
+    const data = await response.json();
+    return data;
+  } catch (error) {
+    console.error('Error getting auto-apply session status:', error);
+    throw error;
+  }
+}
+
+export async function getAutoApplySessions() {
+  try {
+    const token = await getAuthToken();
+    console.log('Getting all auto-apply sessions');
+    
+    // Fix the URL to match server route configuration
+    const response = await fetch(`${API_URL}/auto-apply/sessions`, {
+      headers: {
+        'x-auth-token': token
+      }
+    });
+
+    if (!response.ok) {
+      let errorMessage = 'Failed to get auto-apply sessions';
+      try {
+        const errorData = await response.json();
+        errorMessage = errorData.error || errorMessage;
+      } catch (parseError) {
+        console.error('Error parsing error response:', parseError);
+      }
+      
+      throw new Error(errorMessage);
+    }
+    
+    const data = await response.json();
+    return data;
+  } catch (error) {
+    console.error('Error getting auto-apply sessions:', error);
+    throw error;
+  }
+}
+
+export async function stopAutoApplySession(sessionId: string) {
+  try {
+    const token = await getAuthToken();
+    console.log('Stopping auto-apply session:', sessionId);
+    
+    // Fix the URL to match server route configuration
+    const response = await fetch(`${API_URL}/auto-apply/stop/${sessionId}`, {
+      method: 'POST',
+      headers: {
+        'x-auth-token': token
+      }
+    });
+
+    if (!response.ok) {
+      let errorMessage = 'Failed to stop auto-apply session';
+      try {
+        const errorData = await response.json();
+        errorMessage = errorData.error || errorMessage;
+      } catch (parseError) {
+        console.error('Error parsing error response:', parseError);
+      }
+      
+      throw new Error(errorMessage);
+    }
+    
+    const data = await response.json();
+    return data;
+  } catch (error) {
+    console.error('Error stopping auto-apply session:', error);
     throw error;
   }
 }

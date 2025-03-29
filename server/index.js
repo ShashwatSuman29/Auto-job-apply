@@ -4,6 +4,8 @@ import jobRoutes from './api.js';
 import authRoutes from './auth.js';
 import credentialRoutes from './credentials.js';
 import profileRoutes from './profile.js';
+import settingsRoutes from './settings.js';
+import autoApplyRoutes from './autoApply.js';
 import dotenv from 'dotenv';
 import path from 'path';
 import { fileURLToPath } from 'url';
@@ -38,6 +40,8 @@ app.use('/api', jobRoutes);
 app.use('/api/auth', authRoutes);
 app.use('/api/credentials', credentialRoutes);
 app.use('/api/profile', profileRoutes);
+app.use('/api/settings', settingsRoutes);
+app.use('/api/auto-apply', autoApplyRoutes);
 
 // Start server
 app.listen(port, () => {

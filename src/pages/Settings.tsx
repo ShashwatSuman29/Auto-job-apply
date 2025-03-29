@@ -16,7 +16,7 @@ import { Bell, User, Cog, Mail, Moon, Sun, Upload, Trash2, Palette, ChevronRight
 import { UserSettings, UserProfile } from '@/utils/types';
 import { useToast } from '@/components/ui/use-toast';
 import { useAuth } from '@/context/AuthContext';
-import { getUserProfile, updateUserProfile, uploadResume, deleteResume, updateUserSettings } from '@/lib/api';
+import { getUserProfile, updateUserProfile, uploadResume, deleteResume, updateUserSettings, getUserSettings } from '@/lib/api';
 
 const Settings = () => {
   const { theme, toggleTheme } = useTheme();
@@ -61,6 +61,7 @@ const Settings = () => {
   useEffect(() => {
     if (isAuthenticated && user) {
       fetchUserProfile();
+      fetchUserSettings();
     } else {
       setIsLoading(false);
     }
@@ -78,8 +79,6 @@ const Settings = () => {
         setProfile(profileData);
       }
       
-      // TODO: Fetch user settings when that API is implemented
-      
     } catch (error) {
       console.error('Error fetching user data:', error);
       toast({
@@ -89,6 +88,27 @@ const Settings = () => {
       });
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  const fetchUserSettings = async () => {
+    try {
+      console.log('Fetching user settings...');
+      
+      const settingsData = await getUserSettings();
+      console.log('Settings data:', settingsData);
+      
+      if (settingsData) {
+        setSettings(settingsData);
+      }
+      
+    } catch (error) {
+      console.error('Error fetching user settings:', error);
+      toast({
+        title: "Error",
+        description: "Failed to load your settings. Please try again.",
+        variant: "destructive",
+      });
     }
   };
   
@@ -142,12 +162,35 @@ const Settings = () => {
     }
   };
   
-  const updateSettings = (e: React.FormEvent) => {
+  const updateSettings = async (e: React.FormEvent) => {
     e.preventDefault();
-    toast({
-      title: "Settings Updated",
-      description: "Your preferences have been saved",
-    });
+    
+    try {
+      setIsSettingsUpdating(true);
+      
+      const updatedSettings = await updateUserSettings(settings);
+      setSettings(updatedSettings);
+      
+      toast({
+        title: "Settings Updated",
+        description: "Your preferences have been saved",
+      });
+    } catch (error) {
+      console.error('Error updating settings:', error);
+      
+      let errorMessage = "Failed to update settings";
+      if (error instanceof Error) {
+        errorMessage = error.message;
+      }
+      
+      toast({
+        title: "Error",
+        description: errorMessage,
+        variant: "destructive",
+      });
+    } finally {
+      setIsSettingsUpdating(false);
+    }
   };
   
   const updatePassword = (e: React.FormEvent) => {
@@ -580,8 +623,15 @@ const Settings = () => {
                   <Label htmlFor="includeRemote">Include remote positions</Label>
                 </div>
                 
-                <Button type="submit">
-                  Save Preferences
+                <Button type="submit" disabled={isSettingsUpdating}>
+                  {isSettingsUpdating ? (
+                    <>
+                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                      Saving...
+                    </>
+                  ) : (
+                    'Save Preferences'
+                  )}
                 </Button>
               </form>
               
@@ -777,8 +827,15 @@ const Settings = () => {
                   </div>
                 </div>
                 
-                <Button type="submit">
-                  Save Notification Settings
+                <Button type="submit" disabled={isSettingsUpdating}>
+                  {isSettingsUpdating ? (
+                    <>
+                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                      Saving...
+                    </>
+                  ) : (
+                    'Save Notification Settings'
+                  )}
                 </Button>
               </form>
             </CardContent>
