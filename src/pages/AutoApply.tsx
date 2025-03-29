@@ -13,12 +13,14 @@ import { Progress } from '@/components/ui/progress';
 import { useToast } from '@/components/ui/use-toast';
 import { useAuth } from '@/context/AuthContext';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { 
   startAutoApplySession, 
   getAutoApplySessionStatus, 
   getAutoApplySessions, 
   stopAutoApplySession,
-  getUserSettings
+  getUserSettings,
+  fetchJobListings
 } from '@/lib/api';
 import { 
   Search, 
@@ -34,7 +36,12 @@ import {
   Building,
   MapPin,
   Calendar,
-  ArrowRight
+  ArrowRight,
+  Filter,
+  RefreshCw,
+  Linkedin,
+  ExternalLink,
+  DollarSign
 } from 'lucide-react';
 
 // Define types for auto-apply sessions
@@ -76,6 +83,22 @@ interface AutoApplySession {
   jobs: AutoApplyJob[];
 }
 
+// Define type for job listings
+interface JobListing {
+  id: string;
+  title: string;
+  company: string;
+  location: string;
+  description: string;
+  salary: string;
+  postedDate: string;
+  applicationUrl: string;
+  source: string;
+  skills: string[];
+  jobType: string;
+  experienceLevel: string;
+}
+
 const AutoApply = () => {
   const { isAuthenticated, user } = useAuth();
   const { toast } = useToast();
@@ -95,6 +118,13 @@ const AutoApply = () => {
   const [isStartingSession, setIsStartingSession] = useState<boolean>(false);
   const [isStoppingSession, setIsStoppingSession] = useState<boolean>(false);
   
+  // State for job listings
+  const [jobListings, setJobListings] = useState<JobListing[]>([]);
+  const [isLoadingJobs, setIsLoadingJobs] = useState<boolean>(false);
+  const [jobSearchQuery, setJobSearchQuery] = useState<string>('');
+  const [jobSearchLocation, setJobSearchLocation] = useState<string>('');
+  const [jobSource, setJobSource] = useState<string>('all');
+  
   // Ref for polling interval
   const pollingIntervalRef = useRef<NodeJS.Timeout | null>(null);
   
@@ -113,6 +143,31 @@ const AutoApply = () => {
     };
   }, [isAuthenticated]);
   
+  // Load job listings
+  const loadJobListings = async () => {
+    try {
+      setIsLoadingJobs(true);
+      const listings = await fetchJobListings(jobSearchQuery, jobSearchLocation, jobSource);
+      setJobListings(listings);
+    } catch (error) {
+      console.error('Error loading job listings:', error);
+      toast({
+        title: 'Error',
+        description: 'Failed to load job listings. Please try again.',
+        variant: 'destructive',
+      });
+    } finally {
+      setIsLoadingJobs(false);
+    }
+  };
+
+  // Load job listings when component mounts or when search parameters change
+  useEffect(() => {
+    if (isAuthenticated) {
+      loadJobListings();
+    }
+  }, [isAuthenticated]);
+
   // Start polling for active session updates
   useEffect(() => {
     if (activeSession && activeSession.status === 'running') {
@@ -320,7 +375,36 @@ const AutoApply = () => {
       setIsStoppingSession(false);
     }
   };
+
+  // Get source icon based on job source
+  const getSourceIcon = (source: string) => {
+    switch (source.toLowerCase()) {
+      case 'linkedin':
+        return <Linkedin className="h-4 w-4 text-blue-600" />;
+      case 'indeed':
+        return <Briefcase className="h-4 w-4 text-blue-500" />;
+      case 'internshala':
+        return <FileText className="h-4 w-4 text-green-500" />;
+      default:
+        return <Briefcase className="h-4 w-4 text-gray-500" />;
+    }
+  };
   
+  // Get log icon based on type
+  const getLogIcon = (type: string) => {
+    switch (type) {
+      case 'success':
+        return <CheckCircle className="h-4 w-4 text-green-500" />;
+      case 'warning':
+        return <AlertCircle className="h-4 w-4 text-yellow-500" />;
+      case 'error':
+        return <XCircle className="h-4 w-4 text-red-500" />;
+      case 'info':
+      default:
+        return <Clock className="h-4 w-4 text-blue-500" />;
+    }
+  };
+
   // Format date for display
   const formatDate = (dateString: string | Date) => {
     const date = new Date(dateString);
@@ -348,22 +432,7 @@ const AutoApply = () => {
         return 'bg-gray-500';
     }
   };
-  
-  // Get log icon based on type
-  const getLogIcon = (type: string) => {
-    switch (type) {
-      case 'success':
-        return <CheckCircle className="h-4 w-4 text-green-500" />;
-      case 'warning':
-        return <AlertCircle className="h-4 w-4 text-yellow-500" />;
-      case 'error':
-        return <XCircle className="h-4 w-4 text-red-500" />;
-      case 'info':
-      default:
-        return <Clock className="h-4 w-4 text-blue-500" />;
-    }
-  };
-  
+
   return (
     <div className="container mx-auto space-y-6">
       <div className="flex justify-between items-center">
@@ -386,7 +455,7 @@ const AutoApply = () => {
         </Alert>
       )}
 
-      <Tabs defaultValue="search">
+      <Tabs defaultValue="automation">
         <TabsList className="grid w-full grid-cols-3">
           <TabsTrigger value="search">
             <Search className="h-4 w-4 mr-2" />
@@ -517,9 +586,9 @@ const AutoApply = () => {
             <CardHeader>
               <div className="flex justify-between items-center">
                 <div>
-                  <CardTitle>Active Automation</CardTitle>
+                  <CardTitle>Job Listings</CardTitle>
                   <CardDescription>
-                    Monitor your current auto-apply session
+                    Browse job openings from multiple sources
                   </CardDescription>
                 </div>
                 {activeSession && (
@@ -530,135 +599,211 @@ const AutoApply = () => {
               </div>
             </CardHeader>
             <CardContent className="space-y-4">
-              {isLoading ? (
-                <div className="flex justify-center items-center py-8">
+              <div className="flex flex-col space-y-4 md:flex-row md:space-y-0 md:space-x-4">
+                <div className="flex-1">
+                  <Label htmlFor="jobSearchQuery">Search</Label>
+                  <div className="relative">
+                    <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
+                    <Input
+                      id="jobSearchQuery"
+                      placeholder="Job title, keywords, or company"
+                      className="pl-8"
+                      value={jobSearchQuery}
+                      onChange={(e) => setJobSearchQuery(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter') {
+                          loadJobListings();
+                        }
+                      }}
+                    />
+                  </div>
+                </div>
+                <div className="flex-1">
+                  <Label htmlFor="jobSearchLocation">Location</Label>
+                  <div className="relative">
+                    <MapPin className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
+                    <Input
+                      id="jobSearchLocation"
+                      placeholder="City, state, or remote"
+                      className="pl-8"
+                      value={jobSearchLocation}
+                      onChange={(e) => setJobSearchLocation(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter') {
+                          loadJobListings();
+                        }
+                      }}
+                    />
+                  </div>
+                </div>
+                <div className="w-full md:w-48">
+                  <Label htmlFor="jobSource">Source</Label>
+                  <Select
+                    value={jobSource}
+                    onValueChange={(value) => setJobSource(value)}
+                  >
+                    <SelectTrigger id="jobSource">
+                      <SelectValue placeholder="All Sources" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">All Sources</SelectItem>
+                      <SelectItem value="linkedin">LinkedIn</SelectItem>
+                      <SelectItem value="indeed">Indeed</SelectItem>
+                      <SelectItem value="internshala">Internshala</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="flex items-end">
+                  <Button 
+                    onClick={loadJobListings} 
+                    disabled={isLoadingJobs}
+                    className="w-full md:w-auto"
+                  >
+                    {isLoadingJobs ? (
+                      <>
+                        <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                        Loading...
+                      </>
+                    ) : (
+                      <>
+                        <RefreshCw className="h-4 w-4 mr-2" />
+                        Search
+                      </>
+                    )}
+                  </Button>
+                </div>
+              </div>
+              
+              {isLoadingJobs ? (
+                <div className="flex justify-center items-center py-12">
                   <Loader2 className="h-8 w-8 animate-spin text-primary" />
                 </div>
-              ) : activeSession ? (
-                <div className="space-y-6">
-                  <div className="grid gap-4 md:grid-cols-3">
-                    <div className="bg-muted rounded-lg p-4 text-center">
-                      <h3 className="text-sm font-medium text-muted-foreground">Jobs Found</h3>
-                      <p className="text-2xl font-bold">{activeSession.jobsFound}</p>
-                    </div>
-                    <div className="bg-muted rounded-lg p-4 text-center">
-                      <h3 className="text-sm font-medium text-muted-foreground">Applications Submitted</h3>
-                      <p className="text-2xl font-bold">{activeSession.applicationsSubmitted}</p>
-                    </div>
-                    <div className="bg-muted rounded-lg p-4 text-center">
-                      <h3 className="text-sm font-medium text-muted-foreground">Applications Skipped</h3>
-                      <p className="text-2xl font-bold">{activeSession.applicationsSkipped}</p>
-                    </div>
-                  </div>
-                  
-                  <div className="space-y-2">
-                    <h3 className="text-sm font-medium">Search Criteria</h3>
-                    <div className="bg-muted rounded-lg p-4 space-y-2">
-                      <div className="flex items-center">
-                        <Briefcase className="h-4 w-4 mr-2 text-muted-foreground" />
-                        <span className="text-sm">Job Titles: {activeSession.jobTitles.join(', ')}</span>
+              ) : jobListings.length > 0 ? (
+                <div className="space-y-4">
+                  {jobListings.map((job) => (
+                    <div key={job.id} className="border rounded-lg p-4 space-y-3 hover:shadow-md transition-shadow">
+                      <div className="flex justify-between items-start">
+                        <div>
+                          <h3 className="font-medium text-lg">{job.title}</h3>
+                          <p className="text-sm text-muted-foreground flex items-center">
+                            <Building className="h-3 w-3 mr-1" />
+                            {job.company} • <MapPin className="h-3 w-3 mx-1" />{job.location}
+                          </p>
+                        </div>
+                        <div className="flex items-center space-x-2">
+                          <Badge variant="outline" className="flex items-center">
+                            {getSourceIcon(job.source)}
+                            <span className="ml-1">{job.source}</span>
+                          </Badge>
+                          <Badge variant="outline">{job.jobType}</Badge>
+                        </div>
                       </div>
-                      <div className="flex items-center">
-                        <MapPin className="h-4 w-4 mr-2 text-muted-foreground" />
-                        <span className="text-sm">Locations: {activeSession.locations.join(', ')}</span>
+                      
+                      <p className="text-sm line-clamp-2">{job.description}</p>
+                      
+                      <div className="flex flex-wrap gap-2 mt-2">
+                        {job.skills.map((skill, index) => (
+                          <Badge key={index} variant="secondary">{skill}</Badge>
+                        ))}
                       </div>
-                      {activeSession.excludeCompanies.length > 0 && (
+                      
+                      <div className="flex justify-between items-center text-xs text-muted-foreground mt-2">
                         <div className="flex items-center">
-                          <Building className="h-4 w-4 mr-2 text-muted-foreground" />
-                          <span className="text-sm">Excluding: {activeSession.excludeCompanies.join(', ')}</span>
+                          <DollarSign className="h-3 w-3 mr-1" />
+                          <span>{job.salary}</span>
                         </div>
-                      )}
-                    </div>
-                  </div>
-                  
-                  <div className="space-y-2">
-                    <div className="flex justify-between items-center">
-                      <h3 className="text-sm font-medium">Recent Activity</h3>
-                      <span className="text-xs text-muted-foreground">
-                        Last updated: {formatDate(activeSession.lastUpdateTime)}
-                      </span>
-                    </div>
-                    <div className="bg-muted rounded-lg p-4 max-h-60 overflow-y-auto space-y-2">
-                      {activeSession.logs.slice().reverse().map((log, index) => (
-                        <div key={index} className="flex items-start space-x-2 text-sm">
-                          {getLogIcon(log.type)}
-                          <div>
-                            <span className="text-xs text-muted-foreground">{formatDate(log.time)}</span>
-                            <p>{log.message}</p>
-                          </div>
+                        <div className="flex items-center">
+                          <Clock className="h-3 w-3 mr-1" />
+                          <span>Posted: {new Date(job.postedDate).toLocaleDateString()}</span>
                         </div>
-                      ))}
+                      </div>
+                      
+                      <div className="flex justify-between items-center pt-2">
+                        <Badge variant="outline">{job.experienceLevel}</Badge>
+                        <div className="flex space-x-2">
+                          <Button 
+                            variant="outline" 
+                            size="sm"
+                            onClick={() => {
+                              // Add to job tracker functionality would go here
+                              toast({
+                                title: "Job Saved",
+                                description: "Job has been added to your tracker",
+                              });
+                            }}
+                          >
+                            Save
+                          </Button>
+                          <Button 
+                            variant="default" 
+                            size="sm"
+                            onClick={() => window.open(job.applicationUrl, '_blank')}
+                          >
+                            Apply <ExternalLink className="h-3 w-3 ml-1" />
+                          </Button>
+                        </div>
+                      </div>
                     </div>
-                  </div>
-                  
-                  {activeSession.status === 'running' && (
-                    <Button 
-                      variant="destructive" 
-                      onClick={stopActiveSession} 
-                      disabled={isStoppingSession}
-                      className="w-full"
-                    >
-                      {isStoppingSession ? (
-                        <>
-                          <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                          Stopping...
-                        </>
-                      ) : (
-                        <>
-                          <Square className="h-4 w-4 mr-2" />
-                          Stop Auto-Apply
-                        </>
-                      )}
-                    </Button>
-                  )}
+                  ))}
                 </div>
               ) : (
-                <div className="text-center py-8">
-                  <p className="text-muted-foreground">No active automation session</p>
+                <div className="text-center py-12 border rounded-lg">
+                  <Briefcase className="h-12 w-12 mx-auto text-muted-foreground" />
+                  <h3 className="mt-4 text-lg font-medium">No job listings found</h3>
                   <p className="text-sm text-muted-foreground mt-2">
-                    Go to the Search tab to start a new auto-apply session
+                    Try adjusting your search criteria or try again later
                   </p>
                 </div>
               )}
             </CardContent>
           </Card>
           
-          {activeSession && activeSession.jobs.length > 0 && (
+          {activeSession && (
             <Card>
               <CardHeader>
-                <CardTitle>Found Jobs</CardTitle>
-                <CardDescription>
-                  Jobs found during the current auto-apply session
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-4">
-                  {activeSession.jobs.slice().reverse().map((job, index) => (
-                    <div key={index} className="border rounded-lg p-4 space-y-2">
-                      <div className="flex justify-between items-start">
-                        <div>
-                          <h3 className="font-medium">{job.title}</h3>
-                          <p className="text-sm text-muted-foreground">{job.company} • {job.location}</p>
-                        </div>
-                        <Badge className={`${getStatusBadgeColor(job.status)} text-white`}>
-                          {job.status.toUpperCase()}
-                        </Badge>
-                      </div>
-                      <div className="flex justify-between items-center text-xs text-muted-foreground">
-                        <span>Source: {job.source}</span>
-                        <span>Found: {formatDate(job.foundAt)}</span>
-                      </div>
-                      <a 
-                        href={job.url} 
-                        target="_blank" 
-                        rel="noopener noreferrer"
-                        className="text-sm text-blue-500 hover:underline flex items-center"
-                      >
-                        View Job <ArrowRight className="h-3 w-3 ml-1" />
-                      </a>
-                    </div>
-                  ))}
+                <div className="flex justify-between items-center">
+                  <CardTitle>Active Automation</CardTitle>
+                  <Badge className={`${getStatusBadgeColor(activeSession.status)} text-white`}>
+                    {activeSession.status.toUpperCase()}
+                  </Badge>
                 </div>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="grid gap-4 md:grid-cols-3">
+                  <div className="bg-muted rounded-lg p-4 text-center">
+                    <h3 className="text-sm font-medium text-muted-foreground">Jobs Found</h3>
+                    <p className="text-2xl font-bold">{activeSession.jobsFound}</p>
+                  </div>
+                  <div className="bg-muted rounded-lg p-4 text-center">
+                    <h3 className="text-sm font-medium text-muted-foreground">Applications Submitted</h3>
+                    <p className="text-2xl font-bold">{activeSession.applicationsSubmitted}</p>
+                  </div>
+                  <div className="bg-muted rounded-lg p-4 text-center">
+                    <h3 className="text-sm font-medium text-muted-foreground">Applications Skipped</h3>
+                    <p className="text-2xl font-bold">{activeSession.applicationsSkipped}</p>
+                  </div>
+                </div>
+                
+                {activeSession.status === 'running' && (
+                  <Button 
+                    variant="destructive" 
+                    onClick={stopActiveSession} 
+                    disabled={isStoppingSession}
+                    className="w-full"
+                  >
+                    {isStoppingSession ? (
+                      <>
+                        <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                        Stopping...
+                      </>
+                    ) : (
+                      <>
+                        <Square className="h-4 w-4 mr-2" />
+                        Stop Auto-Apply
+                      </>
+                    )}
+                  </Button>
+                )}
               </CardContent>
             </Card>
           )}

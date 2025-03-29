@@ -80,6 +80,86 @@ export async function getJobApplications(): Promise<JobApplication[]> {
   }
 }
 
+export interface JobSearchParams {
+  query?: string;
+  status?: string;
+  company?: string;
+  dateFrom?: string;
+  dateTo?: string;
+}
+
+export async function searchJobApplications(searchParams: JobSearchParams): Promise<JobApplication[]> {
+  try {
+    const token = await getAuthToken();
+    
+    // Build query string from search parameters
+    const queryParams = new URLSearchParams();
+    if (searchParams.query) queryParams.append('query', searchParams.query);
+    if (searchParams.status) queryParams.append('status', searchParams.status);
+    if (searchParams.company) queryParams.append('company', searchParams.company);
+    if (searchParams.dateFrom) queryParams.append('dateFrom', searchParams.dateFrom);
+    if (searchParams.dateTo) queryParams.append('dateTo', searchParams.dateTo);
+    
+    const url = `${API_URL}/jobs/search?${queryParams.toString()}`;
+    console.log('Search URL:', url);
+    
+    const response = await fetch(url, {
+      headers: {
+        'x-auth-token': token
+      }
+    });
+    
+    if (!response.ok) {
+      const errorData = await response.json();
+      console.error('Search API error:', errorData);
+      throw new Error(errorData.error || 'Failed to search job applications');
+    }
+    
+    const data = await response.json();
+    console.log(`Search returned ${data.length} results`);
+    return data;
+  } catch (error) {
+    console.error('Error searching job applications:', error);
+    try {
+      // Try to refresh token if needed
+      const newToken = await refreshTokenIfNeeded(error);
+      if (newToken) {
+        // Build query string from search parameters
+        const queryParams = new URLSearchParams();
+        if (searchParams.query) queryParams.append('query', searchParams.query);
+        if (searchParams.status) queryParams.append('status', searchParams.status);
+        if (searchParams.company) queryParams.append('company', searchParams.company);
+        if (searchParams.dateFrom) queryParams.append('dateFrom', searchParams.dateFrom);
+        if (searchParams.dateTo) queryParams.append('dateTo', searchParams.dateTo);
+        
+        const url = `${API_URL}/jobs/search?${queryParams.toString()}`;
+        console.log('Retry search URL with new token:', url);
+        
+        // Retry the request with new token
+        const response = await fetch(url, {
+          headers: {
+            'x-auth-token': newToken
+          }
+        });
+        
+        if (!response.ok) {
+          const errorData = await response.json();
+          console.error('Search API retry error:', errorData);
+          throw new Error(errorData.error || 'Failed to search job applications');
+        }
+        
+        const data = await response.json();
+        console.log(`Search retry returned ${data.length} results`);
+        return data;
+      }
+    } catch (refreshError) {
+      console.error('Token refresh error during search:', refreshError);
+      throw refreshError;
+    }
+    throw error;
+  }
+}
+
 export async function addJobApplication(jobApplication: JobApplication): Promise<JobApplication> {
   try {
     const token = await getAuthToken();
@@ -865,3 +945,47 @@ export async function stopAutoApplySession(sessionId: string) {
     throw error;
   }
 }
+
+/**
+ * Fetch job listings from multiple job sites
+ * @param query - Optional search query
+ * @param location - Optional location filter
+ * @param source - Optional source filter (linkedin, indeed, internshala, or all)
+ * @returns Array of job listings
+ */
+export const fetchJobListings = async (
+  query?: string,
+  location?: string,
+  source?: string
+): Promise<any[]> => {
+  try {
+    // Build query parameters
+    const params = new URLSearchParams();
+    if (query) params.append('query', query);
+    if (location) params.append('location', location);
+    if (source) params.append('source', source);
+    
+    // Log the request
+    console.log(`Fetching job listings with params:`, { query, location, source });
+    
+    const response = await fetch(`${API_URL}/auto-apply/job-listings?${params.toString()}`, {
+      method: 'GET',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-auth-token': await getAuthToken()
+      }
+    });
+    
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.error || 'Failed to fetch job listings');
+    }
+    
+    const data = await response.json();
+    console.log(`Received ${data.length} job listings`);
+    return data;
+  } catch (error) {
+    console.error('Error fetching job listings:', error);
+    throw error;
+  }
+};

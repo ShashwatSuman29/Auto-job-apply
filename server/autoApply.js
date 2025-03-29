@@ -146,6 +146,181 @@ router.post('/stop/:sessionId', auth, async (req, res) => {
     }
 });
 
+// Fetch job listings from multiple job sites
+router.get('/job-listings', auth, async (req, res) => {
+    try {
+        const { query, location, source } = req.query;
+        
+        // Log the request
+        console.log(`Fetching job listings with query: ${query}, location: ${location}, source: ${source || 'all'}`);
+        
+        // Initialize empty array for job listings
+        let jobListings = [];
+        
+        // Function to fetch jobs from LinkedIn
+        const fetchLinkedInJobs = async () => {
+            try {
+                console.log('Fetching jobs from LinkedIn...');
+                // In a real implementation, you would use LinkedIn API or web scraping
+                // For demo purposes, we'll return mock data
+                return [
+                    {
+                        id: `linkedin-${Date.now()}-1`,
+                        title: query ? `${query} Engineer` : 'Software Engineer',
+                        company: 'LinkedIn Corporation',
+                        location: location || 'Bangalore, India',
+                        description: 'Join our team to build scalable web applications using modern technologies.',
+                        salary: '₹12,00,000 - ₹18,00,000 per year',
+                        postedDate: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString(),
+                        applicationUrl: 'https://linkedin.com/jobs/view/123456',
+                        source: 'LinkedIn',
+                        skills: ['JavaScript', 'React', 'Node.js'],
+                        jobType: 'Full-time',
+                        experienceLevel: '3-5 years'
+                    },
+                    {
+                        id: `linkedin-${Date.now()}-2`,
+                        title: query ? `Senior ${query} Developer` : 'Senior Software Developer',
+                        company: 'Microsoft',
+                        location: location || 'Hyderabad, India',
+                        description: 'Looking for experienced developers to join our cloud services team.',
+                        salary: '₹20,00,000 - ₹30,00,000 per year',
+                        postedDate: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000).toISOString(),
+                        applicationUrl: 'https://linkedin.com/jobs/view/234567',
+                        source: 'LinkedIn',
+                        skills: ['C#', '.NET', 'Azure', 'Cloud Computing'],
+                        jobType: 'Full-time',
+                        experienceLevel: '5+ years'
+                    }
+                ];
+            } catch (error) {
+                console.error('Error fetching LinkedIn jobs:', error);
+                return [];
+            }
+        };
+        
+        // Function to fetch jobs from Indeed
+        const fetchIndeedJobs = async () => {
+            try {
+                console.log('Fetching jobs from Indeed...');
+                // In a real implementation, you would use Indeed API or web scraping
+                // For demo purposes, we'll return mock data
+                return [
+                    {
+                        id: `indeed-${Date.now()}-1`,
+                        title: query ? `${query} Developer` : 'Full Stack Developer',
+                        company: 'TCS',
+                        location: location || 'Mumbai, India',
+                        description: 'We are looking for a skilled developer to join our digital transformation team.',
+                        salary: '₹8,00,000 - ₹15,00,000 per year',
+                        postedDate: new Date(Date.now() - 1 * 24 * 60 * 60 * 1000).toISOString(),
+                        applicationUrl: 'https://indeed.com/jobs/view/345678',
+                        source: 'Indeed',
+                        skills: ['JavaScript', 'React', 'Node.js', 'MongoDB'],
+                        jobType: 'Full-time',
+                        experienceLevel: '2-4 years'
+                    },
+                    {
+                        id: `indeed-${Date.now()}-2`,
+                        title: query ? `${query} Specialist` : 'DevOps Engineer',
+                        company: 'Infosys',
+                        location: location || 'Pune, India',
+                        description: 'Join our cloud infrastructure team to build and maintain scalable systems.',
+                        salary: '₹10,00,000 - ₹18,00,000 per year',
+                        postedDate: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000).toISOString(),
+                        applicationUrl: 'https://indeed.com/jobs/view/456789',
+                        source: 'Indeed',
+                        skills: ['AWS', 'Docker', 'Kubernetes', 'CI/CD'],
+                        jobType: 'Full-time',
+                        experienceLevel: '3-5 years'
+                    }
+                ];
+            } catch (error) {
+                console.error('Error fetching Indeed jobs:', error);
+                return [];
+            }
+        };
+        
+        // Function to fetch jobs from Internshala
+        const fetchInternshalaJobs = async () => {
+            try {
+                console.log('Fetching jobs from Internshala...');
+                // In a real implementation, you would use Internshala API or web scraping
+                // For demo purposes, we'll return mock data
+                return [
+                    {
+                        id: `internshala-${Date.now()}-1`,
+                        title: query ? `${query} Intern` : 'Web Development Intern',
+                        company: 'Startup Hub',
+                        location: location || 'Remote',
+                        description: 'Looking for passionate interns to help build our web platform.',
+                        salary: '₹10,000 - ₹15,000 per month',
+                        postedDate: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString(),
+                        applicationUrl: 'https://internshala.com/internship/detail/567890',
+                        source: 'Internshala',
+                        skills: ['HTML', 'CSS', 'JavaScript', 'React'],
+                        jobType: 'Internship',
+                        experienceLevel: '0-1 years'
+                    },
+                    {
+                        id: `internshala-${Date.now()}-2`,
+                        title: query ? `${query} Trainee` : 'Data Science Trainee',
+                        company: 'Analytics Vidya',
+                        location: location || 'Bangalore, India',
+                        description: 'Join our data science team to work on real-world machine learning projects.',
+                        salary: '₹15,000 - ₹20,000 per month',
+                        postedDate: new Date(Date.now() - 4 * 24 * 60 * 60 * 1000).toISOString(),
+                        applicationUrl: 'https://internshala.com/internship/detail/678901',
+                        source: 'Internshala',
+                        skills: ['Python', 'Machine Learning', 'Data Analysis'],
+                        jobType: 'Internship',
+                        experienceLevel: '0-1 years'
+                    }
+                ];
+            } catch (error) {
+                console.error('Error fetching Internshala jobs:', error);
+                return [];
+            }
+        };
+        
+        // Fetch jobs based on source parameter or fetch from all sources
+        if (!source || source === 'all') {
+            // Fetch from all sources in parallel
+            const [linkedInJobs, indeedJobs, internshalaJobs] = await Promise.all([
+                fetchLinkedInJobs(),
+                fetchIndeedJobs(),
+                fetchInternshalaJobs()
+            ]);
+            
+            jobListings = [...linkedInJobs, ...indeedJobs, ...internshalaJobs];
+        } else {
+            // Fetch from specific source
+            switch (source.toLowerCase()) {
+                case 'linkedin':
+                    jobListings = await fetchLinkedInJobs();
+                    break;
+                case 'indeed':
+                    jobListings = await fetchIndeedJobs();
+                    break;
+                case 'internshala':
+                    jobListings = await fetchInternshalaJobs();
+                    break;
+                default:
+                    return res.status(400).json({ error: 'Invalid source parameter' });
+            }
+        }
+        
+        // Sort job listings by posted date (newest first)
+        jobListings.sort((a, b) => new Date(b.postedDate) - new Date(a.postedDate));
+        
+        console.log(`Returning ${jobListings.length} job listings`);
+        res.json(jobListings);
+    } catch (error) {
+        console.error('Error fetching job listings:', error);
+        res.status(500).json({ error: 'Failed to fetch job listings' });
+    }
+});
+
 // The main function that handles the auto-apply process
 async function startAutoApplyProcess(sessionId, userId) {
     const db = await connectToDatabase();
