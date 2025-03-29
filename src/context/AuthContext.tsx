@@ -17,6 +17,7 @@ interface AuthContextType {
   login: (email: string, password: string) => Promise<void>;
   register: (name: string, email: string, password: string, title?: string, skills?: string[]) => Promise<void>;
   logout: () => void;
+  refreshToken: () => Promise<string | null>;
   error: string | null;
 }
 
@@ -34,6 +35,8 @@ interface AuthProviderProps {
   children: ReactNode;
 }
 
+const API_URL = 'http://localhost:5000/api';
+
 export const AuthProvider = ({ children }: AuthProviderProps) => {
   const [user, setUser] = useState<User | null>(null);
   const [token, setToken] = useState<string | null>(localStorage.getItem('token'));
@@ -45,7 +48,7 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
     const loadUser = async () => {
       if (token) {
         try {
-          const res = await axios.get('http://localhost:5000/api/auth/me', {
+          const res = await axios.get(`${API_URL}/auth/me`, {
             headers: {
               'x-auth-token': token
             }
@@ -55,6 +58,7 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
           console.error('Error loading user:', err);
           localStorage.removeItem('token');
           setToken(null);
+          setUser(null);
         }
       }
       setIsLoading(false);
@@ -67,7 +71,7 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
   const register = async (name: string, email: string, password: string, title?: string, skills?: string[]) => {
     try {
       setError(null);
-      const res = await axios.post('http://localhost:5000/api/auth/register', {
+      const res = await axios.post(`${API_URL}/auth/register`, {
         name,
         email,
         password,
@@ -89,7 +93,7 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
   const login = async (email: string, password: string) => {
     try {
       setError(null);
-      const res = await axios.post('http://localhost:5000/api/auth/login', {
+      const res = await axios.post(`${API_URL}/auth/login`, {
         email,
         password
       });
@@ -101,6 +105,30 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
     } catch (err: any) {
       setError(err.response?.data?.error || 'Login failed');
       throw new Error(err.response?.data?.error || 'Login failed');
+    }
+  };
+
+  // Refresh token - can be called when token validation fails
+  const refreshToken = async (): Promise<string | null> => {
+    if (!token) return null;
+    
+    try {
+      // For now, we'll just validate the existing token
+      // In a real app, you might want to implement a proper token refresh mechanism
+      const res = await axios.get(`${API_URL}/auth/me`, {
+        headers: {
+          'x-auth-token': token
+        }
+      });
+      
+      if (res.status === 200) {
+        return token;
+      }
+      return null;
+    } catch (err) {
+      console.error('Token refresh failed:', err);
+      logout();
+      return null;
     }
   };
 
@@ -121,6 +149,7 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
         login,
         register,
         logout,
+        refreshToken,
         error
       }}
     >

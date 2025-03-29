@@ -2,92 +2,464 @@
 // that connects to MongoDB
 
 import { JobApplication, JobPortalCredential, UserSettings } from '@/utils/types';
+import { useAuth } from '../context/AuthContext';
 
 // Mock implementation for client-side usage
 // In a real app, you would make API calls to your backend
 
 const API_URL = 'http://localhost:5000/api';
 
+// Helper function to get auth token
+const getAuthToken = async () => {
+  const token = localStorage.getItem('token');
+  if (!token) {
+    throw new Error('Authentication required');
+  }
+  return token;
+};
+
+// Helper function to handle token refresh when needed
+const refreshTokenIfNeeded = async (error: any) => {
+  // Check if error is due to invalid token
+  if (error.message === 'Token is not valid' || error.response?.data?.error === 'Token is not valid') {
+    // Get the auth context
+    const auth = window.authContext;
+    if (auth && auth.refreshToken) {
+      // Try to refresh the token
+      const newToken = await auth.refreshToken();
+      if (newToken) {
+        return newToken;
+      }
+    }
+    // If refresh failed or auth context not available, throw authentication error
+    throw new Error('Authentication required. Please log in again.');
+  }
+  // If error is not token-related, rethrow it
+  throw error;
+};
+
 // Job Applications API
 export async function getJobApplications(): Promise<JobApplication[]> {
-  const response = await fetch(`${API_URL}/jobs`);
-  if (!response.ok) {
-    throw new Error('Failed to fetch job applications');
+  try {
+    const token = await getAuthToken();
+    const response = await fetch(`${API_URL}/jobs`, {
+      headers: {
+        'x-auth-token': token
+      }
+    });
+    
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.error || 'Failed to fetch job applications');
+    }
+    
+    return response.json();
+  } catch (error) {
+    console.error('Error fetching job applications:', error);
+    try {
+      // Try to refresh token if needed
+      const newToken = await refreshTokenIfNeeded(error);
+      if (newToken) {
+        // Retry the request with new token
+        const response = await fetch(`${API_URL}/jobs`, {
+          headers: {
+            'x-auth-token': newToken
+          }
+        });
+        
+        if (!response.ok) {
+          throw new Error('Failed to fetch job applications');
+        }
+        
+        return response.json();
+      }
+    } catch (refreshError) {
+      throw refreshError;
+    }
+    throw error;
   }
-  return response.json();
 }
 
 export async function addJobApplication(jobApplication: JobApplication): Promise<JobApplication> {
-  const response = await fetch(`${API_URL}/jobs`, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify(jobApplication),
-  });
+  try {
+    const token = await getAuthToken();
+    const response = await fetch(`${API_URL}/jobs`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-auth-token': token
+      },
+      body: JSON.stringify(jobApplication),
+    });
   
-  if (!response.ok) {
-    throw new Error('Failed to add job application');
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.error || 'Failed to add job application');
+    }
+    return response.json();
+  } catch (error) {
+    console.error('Error adding job application:', error);
+    try {
+      // Try to refresh token if needed
+      const newToken = await refreshTokenIfNeeded(error);
+      if (newToken) {
+        // Retry the request with new token
+        const response = await fetch(`${API_URL}/jobs`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'x-auth-token': newToken
+          },
+          body: JSON.stringify(jobApplication),
+        });
+        
+        if (!response.ok) {
+          const errorData = await response.json();
+          throw new Error(errorData.error || 'Failed to add job application');
+        }
+        
+        return response.json();
+      }
+    } catch (refreshError) {
+      throw refreshError;
+    }
+    throw error;
   }
-  return response.json();
 }
 
 export async function updateJobApplication(id: string, jobApplication: JobApplication): Promise<JobApplication> {
-  const response = await fetch(`${API_URL}/jobs/${id}`, {
-    method: 'PUT',
-    headers: {
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify(jobApplication),
-  });
+  try {
+    const token = await getAuthToken();
+    const response = await fetch(`${API_URL}/jobs/${id}`, {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-auth-token': token
+      },
+      body: JSON.stringify(jobApplication),
+    });
   
-  if (!response.ok) {
-    throw new Error('Failed to update job application');
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.error || 'Failed to update job application');
+    }
+    return response.json();
+  } catch (error) {
+    console.error('Error updating job application:', error);
+    try {
+      // Try to refresh token if needed
+      const newToken = await refreshTokenIfNeeded(error);
+      if (newToken) {
+        // Retry the request with new token
+        const response = await fetch(`${API_URL}/jobs/${id}`, {
+          method: 'PUT',
+          headers: {
+            'Content-Type': 'application/json',
+            'x-auth-token': newToken
+          },
+          body: JSON.stringify(jobApplication),
+        });
+        
+        if (!response.ok) {
+          const errorData = await response.json();
+          throw new Error(errorData.error || 'Failed to update job application');
+        }
+        
+        return response.json();
+      }
+    } catch (refreshError) {
+      throw refreshError;
+    }
+    throw error;
   }
-  return response.json();
 }
 
 export async function deleteJobApplication(id: string): Promise<void> {
-  const response = await fetch(`${API_URL}/jobs/${id}`, {
-    method: 'DELETE',
-  });
+  try {
+    const token = await getAuthToken();
+    const response = await fetch(`${API_URL}/jobs/${id}`, {
+      method: 'DELETE',
+      headers: {
+        'x-auth-token': token
+      }
+    });
   
-  if (!response.ok) {
-    throw new Error('Failed to delete job application');
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.error || 'Failed to delete job application');
+    }
+  } catch (error) {
+    console.error('Error deleting job application:', error);
+    try {
+      // Try to refresh token if needed
+      const newToken = await refreshTokenIfNeeded(error);
+      if (newToken) {
+        // Retry the request with new token
+        const response = await fetch(`${API_URL}/jobs/${id}`, {
+          method: 'DELETE',
+          headers: {
+            'x-auth-token': newToken
+          }
+        });
+        
+        if (!response.ok) {
+          const errorData = await response.json();
+          throw new Error(errorData.error || 'Failed to delete job application');
+        }
+      }
+    } catch (refreshError) {
+      throw refreshError;
+    }
+    throw error;
   }
 }
 
 // Job Portal Credentials API
 export async function getJobPortalCredentials(): Promise<JobPortalCredential[]> {
-  // Simulated API call
-  console.log('Simulating API call to fetch credentials');
-  
-  // Return mock data
-  return [
-    {
-      _id: '1',
-      portalName: 'LinkedIn',
-      username: 'user@example.com',
-      password: '********',
-    },
-    {
-      _id: '2',
-      portalName: 'Indeed',
-      username: 'user@example.com',
-      password: '********',
+  try {
+    const token = await getAuthToken();
+    console.log('Fetching credentials with token:', token.substring(0, 10) + '...');
+    
+    const response = await fetch(`${API_URL}/credentials`, {
+      headers: {
+        'x-auth-token': token
+      }
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json();
+      console.error('Error response from server:', errorData);
+      throw new Error(errorData.error || 'Failed to fetch credentials');
     }
-  ];
+    
+    const data = await response.json();
+    console.log(`Retrieved ${data.length} credentials from API`);
+    
+    // Ensure the data is properly formatted
+    const formattedData = data.map((cred: any) => ({
+      _id: cred._id,
+      userId: cred.userId,
+      portalName: cred.portalName,
+      username: cred.username,
+      password: cred.password,
+      url: cred.url || '',
+      notes: cred.notes || '',
+      createdAt: cred.createdAt,
+      updatedAt: cred.updatedAt
+    }));
+    
+    return formattedData;
+  } catch (error) {
+    console.error('Error fetching credentials:', error);
+    try {
+      // Try to refresh token if needed
+      const newToken = await refreshTokenIfNeeded(error);
+      if (newToken) {
+        console.log('Token refreshed, retrying credential fetch');
+        // Retry the request with new token
+        const response = await fetch(`${API_URL}/credentials`, {
+          headers: {
+            'x-auth-token': newToken
+          }
+        });
+        
+        if (!response.ok) {
+          const errorData = await response.json();
+          throw new Error(errorData.error || 'Failed to fetch credentials');
+        }
+        
+        const data = await response.json();
+        console.log(`Retrieved ${data.length} credentials after token refresh`);
+        
+        // Ensure the data is properly formatted
+        const formattedData = data.map((cred: any) => ({
+          _id: cred._id,
+          userId: cred.userId,
+          portalName: cred.portalName,
+          username: cred.username,
+          password: cred.password,
+          url: cred.url || '',
+          notes: cred.notes || '',
+          createdAt: cred.createdAt,
+          updatedAt: cred.updatedAt
+        }));
+        
+        return formattedData;
+      }
+    } catch (refreshError) {
+      console.error('Token refresh failed:', refreshError);
+      throw refreshError;
+    }
+    throw error;
+  }
 }
 
-export async function addJobPortalCredential(credential: JobPortalCredential): Promise<JobPortalCredential | null> {
-  // Simulated API call
-  console.log('Simulating API call to add credential', credential);
-  
-  // Return the credential with a mock ID
-  return {
-    ...credential,
-    _id: Math.random().toString(36).substring(2, 15)
-  };
+export async function addJobPortalCredential(credential: JobPortalCredential): Promise<JobPortalCredential> {
+  try {
+    const token = await getAuthToken();
+    console.log('Adding credential with token:', token.substring(0, 10) + '...');
+    console.log('Credential data being sent:', { 
+      ...credential, 
+      password: credential.password ? '[REDACTED]' : '[EMPTY]' 
+    });
+    
+    // Ensure all required fields are present and in the correct format
+    if (!credential.portalName || !credential.username || !credential.password) {
+      throw new Error('Portal name, username, and password are required');
+    }
+    
+    // Format the credential object to match server expectations
+    const formattedCredential = {
+      portalName: credential.portalName,
+      username: credential.username,
+      password: credential.password,
+      url: credential.url || '',
+      notes: credential.notes || ''
+    };
+    
+    const response = await fetch(`${API_URL}/credentials`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-auth-token': token
+      },
+      body: JSON.stringify(formattedCredential)
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json();
+      console.error('Error response from server:', errorData);
+      throw new Error(errorData.error || 'Failed to add credential');
+    }
+    
+    const data = await response.json();
+    console.log('Credential added successfully:', { ...data, password: '[REDACTED]' });
+    return data;
+  } catch (error) {
+    console.error('Error adding credential:', error);
+    try {
+      // Try to refresh token if needed
+      const newToken = await refreshTokenIfNeeded(error);
+      if (newToken) {
+        // Format the credential object again to ensure consistency
+        const formattedCredential = {
+          portalName: credential.portalName,
+          username: credential.username,
+          password: credential.password,
+          url: credential.url || '',
+          notes: credential.notes || ''
+        };
+        
+        // Retry the request with new token
+        const response = await fetch(`${API_URL}/credentials`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'x-auth-token': newToken
+          },
+          body: JSON.stringify(formattedCredential)
+        });
+        
+        if (!response.ok) {
+          const errorData = await response.json();
+          throw new Error(errorData.error || 'Failed to add credential');
+        }
+        
+        return response.json();
+      }
+    } catch (refreshError) {
+      throw refreshError;
+    }
+    throw error;
+  }
+}
+
+export async function updateJobPortalCredential(id: string, credential: JobPortalCredential): Promise<JobPortalCredential> {
+  try {
+    const token = await getAuthToken();
+    const response = await fetch(`${API_URL}/credentials/${id}`, {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-auth-token': token
+      },
+      body: JSON.stringify(credential)
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.error || 'Failed to update credential');
+    }
+    
+    return response.json();
+  } catch (error) {
+    console.error('Error updating credential:', error);
+    try {
+      // Try to refresh token if needed
+      const newToken = await refreshTokenIfNeeded(error);
+      if (newToken) {
+        // Retry the request with new token
+        const response = await fetch(`${API_URL}/credentials/${id}`, {
+          method: 'PUT',
+          headers: {
+            'Content-Type': 'application/json',
+            'x-auth-token': newToken
+          },
+          body: JSON.stringify(credential)
+        });
+        
+        if (!response.ok) {
+          const errorData = await response.json();
+          throw new Error(errorData.error || 'Failed to update credential');
+        }
+        
+        return response.json();
+      }
+    } catch (refreshError) {
+      throw refreshError;
+    }
+    throw error;
+  }
+}
+
+export async function deleteJobPortalCredential(id: string): Promise<void> {
+  try {
+    const token = await getAuthToken();
+    const response = await fetch(`${API_URL}/credentials/${id}`, {
+      method: 'DELETE',
+      headers: {
+        'x-auth-token': token
+      }
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.error || 'Failed to delete credential');
+    }
+  } catch (error) {
+    console.error('Error deleting credential:', error);
+    try {
+      // Try to refresh token if needed
+      const newToken = await refreshTokenIfNeeded(error);
+      if (newToken) {
+        // Retry the request with new token
+        const response = await fetch(`${API_URL}/credentials/${id}`, {
+          method: 'DELETE',
+          headers: {
+            'x-auth-token': newToken
+          }
+        });
+        
+        if (!response.ok) {
+          const errorData = await response.json();
+          throw new Error(errorData.error || 'Failed to delete credential');
+        }
+      }
+    } catch (refreshError) {
+      throw refreshError;
+    }
+    throw error;
+  }
 }
 
 // User Settings API
@@ -100,13 +472,15 @@ export async function getUserSettings(userId: string): Promise<UserSettings | nu
     userId,
     emailNotifications: true,
     darkMode: true,
-    jobPreferences: {
+    autoApplyPreferences: {
       jobTitles: ['Software Engineer', 'Frontend Developer'],
       locations: ['Remote', 'New York'],
       salaryRange: {
         min: 80000,
         max: 150000
-      }
+      },
+      excludeCompanies: ['Company X', 'Company Y'],
+      includeRemote: true
     }
   };
 }

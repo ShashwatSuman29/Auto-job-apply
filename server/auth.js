@@ -3,9 +3,13 @@ import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import { connectToDatabase } from '../db.js';
 import { ObjectId } from 'mongodb';
+import dotenv from 'dotenv';
+
+// Load environment variables
+dotenv.config();
 
 const router = express.Router();
-const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key'; // Use environment variable in production
+const JWT_SECRET = process.env.JWT_SECRET;
 
 // Register a new user
 router.post('/register', async (req, res) => {

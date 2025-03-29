@@ -1,5 +1,6 @@
 import express from 'express';
 import { connectToDatabase, closeDatabaseConnection } from '../db.js';
+import { ObjectId } from 'mongodb';
 
 const router = express.Router();
 
@@ -32,13 +33,19 @@ router.put('/jobs/:id', async (req, res) => {
     try {
         const db = await connectToDatabase();
         const { id } = req.params;
+        
+        // Convert string ID to MongoDB ObjectId
+        const objectId = new ObjectId(id);
+        
         const result = await db.collection('jobs').updateOne(
-            { _id: id },
+            { _id: objectId },
             { $set: req.body }
         );
+        
         if (result.matchedCount === 0) {
             return res.status(404).json({ error: 'Job not found' });
         }
+        
         res.json({ ...req.body, _id: id });
     } catch (error) {
         console.error('Error updating job:', error);
@@ -51,10 +58,16 @@ router.delete('/jobs/:id', async (req, res) => {
     try {
         const db = await connectToDatabase();
         const { id } = req.params;
-        const result = await db.collection('jobs').deleteOne({ _id: id });
+        
+        // Convert string ID to MongoDB ObjectId
+        const objectId = new ObjectId(id);
+        
+        const result = await db.collection('jobs').deleteOne({ _id: objectId });
+        
         if (result.deletedCount === 0) {
             return res.status(404).json({ error: 'Job not found' });
         }
+        
         res.status(204).send();
     } catch (error) {
         console.error('Error deleting job:', error);
@@ -62,4 +75,4 @@ router.delete('/jobs/:id', async (req, res) => {
     }
 });
 
-export default router; 
+export default router;

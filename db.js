@@ -1,17 +1,27 @@
 import { MongoClient } from 'mongodb';
+import dotenv from 'dotenv';
 
-// MongoDB connection URI
-const uri = "mongodb+srv://shashwatsumanat29:Shashwat%4029@cluster0.yfh4ijr.mongodb.net/?retryWrites=true&w=majority";
+// Load environment variables
+dotenv.config();
+
+// MongoDB connection URI from environment variables
+const uri = process.env.MONGODB_URI || "mongodb+srv://shashwatsumanat29:Shashwat%4029@cluster0.yfh4ijr.mongodb.net/?retryWrites=true&w=majority";
 
 // Create a MongoDB client
 const client = new MongoClient(uri);
 
+// Database connection instance
+let dbInstance = null;
+
 // Function to connect to the database
-async function connectToDatabase() {
+export async function connectToDatabase() {
     try {
-        await client.connect();
-        console.log('Successfully connected to MongoDB.');
-        return client.db(); // Returns database instance
+        if (!dbInstance) {
+            await client.connect();
+            dbInstance = client.db();
+            console.log('Successfully connected to MongoDB.');
+        }
+        return dbInstance; // Returns database instance
     } catch (error) {
         console.error('Error connecting to MongoDB:', error);
         throw error;
@@ -19,18 +29,15 @@ async function connectToDatabase() {
 }
 
 // Function to close the database connection
-async function closeDatabaseConnection() {
+export async function closeDatabaseConnection() {
     try {
-        await client.close();
-        console.log('Database connection closed.');
+        if (client) {
+            await client.close();
+            dbInstance = null;
+            console.log('Database connection closed.');
+        }
     } catch (error) {
         console.error('Error closing database connection:', error);
         throw error;
     }
 }
-
-export {
-    connectToDatabase,
-    closeDatabaseConnection,
-    client
-}; 

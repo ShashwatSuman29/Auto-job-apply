@@ -2,6 +2,7 @@ import express from 'express';
 import cors from 'cors';
 import jobRoutes from './api.js';
 import authRoutes from './auth.js';
+import credentialRoutes from './credentials.js';
 import dotenv from 'dotenv';
 
 // Load environment variables
@@ -17,6 +18,7 @@ app.use(express.json());
 // Routes
 app.use('/api', jobRoutes);
 app.use('/api/auth', authRoutes);
+app.use('/api/credentials', credentialRoutes);
 
 // Start server
 app.listen(port, () => {

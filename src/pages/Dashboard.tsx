@@ -1,5 +1,4 @@
-
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
@@ -7,49 +6,98 @@ import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
 import JobCard from '@/components/JobCard';
 import { BarChart, LineChart, Zap, ArrowRight, Briefcase, Building, Calendar, CheckCircle, Clock, Award, X } from 'lucide-react';
-import { JobApplication } from '@/utils/types';
+import { JobApplication, JobStatus } from '@/utils/types';
 import { scaleAnimation, slideFromBottomAnimation, staggeredContainer } from '@/lib/transitions';
+import { getJobApplications } from '@/lib/api';
+import { useToast } from '@/components/ui/use-toast';
+import { cn } from '@/lib/utils';
+
+// Define status colors
+const statusColors = {
+  'Applied': 'bg-blue-500',
+  'Interview Scheduled': 'bg-amber-500',
+  'Offer Received': 'bg-green-500',
+  'Rejected': 'bg-red-500',
+  'Saved': 'bg-purple-500'
+};
 
 const Dashboard = () => {
-  // Mock data for the dashboard
-  const [recentJobs] = useState<JobApplication[]>([
-    {
-      _id: '1',
-      companyName: 'Apple Inc.',
-      jobTitle: 'Frontend Developer',
-      applicationDate: '2023-06-15',
-      status: 'Interview Scheduled',
-      location: 'San Francisco, CA',
-      salary: '$120,000 - $150,000',
-      successPrediction: 85,
-    },
-    {
-      _id: '2',
-      companyName: 'Google',
-      jobTitle: 'UI/UX Designer',
-      applicationDate: '2023-06-10',
-      status: 'Applied',
-      location: 'Remote',
-      salary: '$100,000 - $130,000',
-      notes: 'Applied through referral from John. Follow up after 1 week.',
-      successPrediction: 65,
-    },
+  const [recentJobs, setRecentJobs] = useState<JobApplication[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [stats, setStats] = useState([
+    { title: 'Applications', value: 0, icon: <Briefcase className="h-5 w-5" />, color: 'blue' },
+    { title: 'Interviews', value: 0, icon: <Calendar className="h-5 w-5" />, color: 'amber' },
+    { title: 'Offers', value: 0, icon: <Award className="h-5 w-5" />, color: 'green' },
+    { title: 'Rejections', value: 0, icon: <X className="h-5 w-5" />, color: 'red' },
   ]);
+  const [applicationsByStatus, setApplicationsByStatus] = useState([
+    { status: 'Applied', count: 0, color: statusColors['Applied'] },
+    { status: 'Interview Scheduled', count: 0, color: statusColors['Interview Scheduled'] },
+    { status: 'Offer Received', count: 0, color: statusColors['Offer Received'] },
+    { status: 'Rejected', count: 0, color: statusColors['Rejected'] },
+    { status: 'Saved', count: 0, color: statusColors['Saved'] },
+  ]);
+  const { toast } = useToast();
 
-  const stats = [
-    { title: 'Applications', value: 24, icon: <Briefcase className="h-5 w-5" />, color: 'blue' },
-    { title: 'Interviews', value: 8, icon: <Calendar className="h-5 w-5" />, color: 'amber' },
-    { title: 'Offers', value: 2, icon: <Award className="h-5 w-5" />, color: 'green' },
-    { title: 'Rejections', value: 6, icon: <X className="h-5 w-5" />, color: 'red' },
-  ];
+  // Fetch job applications when component mounts
+  useEffect(() => {
+    const fetchJobData = async () => {
+      try {
+        setIsLoading(true);
+        const jobs = await getJobApplications();
+        
+        // Sort by date (newest first) and take the most recent ones
+        const sortedJobs = [...jobs].sort((a, b) => 
+          new Date(b.applicationDate).getTime() - new Date(a.applicationDate).getTime()
+        );
+        
+        // Set recent jobs (latest 5)
+        setRecentJobs(sortedJobs.slice(0, 5));
+        
+        // Update statistics
+        updateStatistics(jobs);
+      } catch (error) {
+        console.error('Error fetching job data:', error);
+        toast({
+          title: "Error",
+          description: "Failed to fetch job application data",
+          variant: "destructive",
+        });
+      } finally {
+        setIsLoading(false);
+      }
+    };
 
-  const applicationsByStatus = [
-    { status: 'Applied', count: 8, color: 'bg-blue-500' },
-    { status: 'Interview', count: 6, color: 'bg-amber-500' },
-    { status: 'Offer', count: 2, color: 'bg-green-500' },
-    { status: 'Rejected', count: 6, color: 'bg-red-500' },
-    { status: 'Saved', count: 2, color: 'bg-purple-500' },
-  ];
+    fetchJobData();
+  }, [toast]);
+
+  // Update statistics based on job data
+  const updateStatistics = (jobs: JobApplication[]) => {
+    // Count applications by status
+    const totalApplications = jobs.length;
+    const interviewCount = jobs.filter(job => job.status === 'Interview Scheduled').length;
+    const offerCount = jobs.filter(job => job.status === 'Offer Received').length;
+    const rejectionCount = jobs.filter(job => job.status === 'Rejected').length;
+    const appliedCount = jobs.filter(job => job.status === 'Applied').length;
+    const savedCount = jobs.filter(job => job.status === 'Saved').length;
+
+    // Update stats
+    setStats([
+      { title: 'Applications', value: totalApplications, icon: <Briefcase className="h-5 w-5" />, color: 'blue' },
+      { title: 'Interviews', value: interviewCount, icon: <Calendar className="h-5 w-5" />, color: 'amber' },
+      { title: 'Offers', value: offerCount, icon: <Award className="h-5 w-5" />, color: 'green' },
+      { title: 'Rejections', value: rejectionCount, icon: <X className="h-5 w-5" />, color: 'red' },
+    ]);
+
+    // Update applications by status
+    setApplicationsByStatus([
+      { status: 'Applied', count: appliedCount, color: statusColors['Applied'] },
+      { status: 'Interview Scheduled', count: interviewCount, color: statusColors['Interview Scheduled'] },
+      { status: 'Offer Received', count: offerCount, color: statusColors['Offer Received'] },
+      { status: 'Rejected', count: rejectionCount, color: statusColors['Rejected'] },
+      { status: 'Saved', count: savedCount, color: statusColors['Saved'] },
+    ]);
+  };
 
   return (
     <div className="space-y-8">
@@ -111,10 +159,16 @@ const Dashboard = () => {
                 {applicationsByStatus.map((item, index) => (
                   <div key={index} className="space-y-2">
                     <div className="flex items-center justify-between text-sm">
-                      <span>{item.status}</span>
+                      <div className="flex items-center">
+                        <div className={`w-3 h-3 rounded-full mr-2 ${item.color}`}></div>
+                        <span>{item.status}</span>
+                      </div>
                       <span className="font-medium">{item.count}</span>
                     </div>
-                    <Progress value={(item.count / 24) * 100} className={item.color} />
+                    <Progress 
+                      value={stats[0].value > 0 ? (item.count / stats[0].value) * 100 : 0} 
+                      className={item.color} 
+                    />
                   </div>
                 ))}
               </div>
@@ -142,26 +196,30 @@ const Dashboard = () => {
               <CardDescription>Your latest job applications</CardDescription>
             </CardHeader>
             <CardContent className="space-y-3 p-4">
-              {recentJobs.map((job) => (
-                <div key={job._id} className="border-b pb-3 last:border-b-0 last:pb-0">
-                  <div className="flex justify-between items-start">
-                    <div>
-                      <h4 className="font-medium">{job.jobTitle}</h4>
-                      <div className="flex items-center text-sm text-muted-foreground">
-                        <Building className="h-3 w-3 mr-1" />
-                        {job.companyName}
+              {isLoading ? (
+                <div className="text-center py-4 text-muted-foreground">Loading recent applications...</div>
+              ) : recentJobs.length > 0 ? (
+                recentJobs.map((job) => (
+                  <div key={job._id} className="border-b pb-3 last:border-b-0 last:pb-0">
+                    <div className="flex justify-between items-start">
+                      <div>
+                        <h4 className="font-medium">{job.jobTitle}</h4>
+                        <div className="flex items-center text-sm text-muted-foreground">
+                          <Building className="h-3 w-3 mr-1" />
+                          {job.companyName}
+                        </div>
+                      </div>
+                      <div className="flex items-center space-x-2">
+                        <div className={`px-2 py-1 text-xs rounded-full ${statusColors[job.status]} bg-opacity-20 text-${job.status === 'Applied' ? 'blue' : job.status === 'Interview Scheduled' ? 'amber' : job.status === 'Offer Received' ? 'green' : job.status === 'Rejected' ? 'red' : 'purple'}-700`}>
+                          {job.status}
+                        </div>
                       </div>
                     </div>
-                    <div className="flex items-center space-x-2">
-                      {job.status === 'Applied' && <Clock className="h-4 w-4 text-blue-500" />}
-                      {job.status === 'Interview Scheduled' && <Calendar className="h-4 w-4 text-amber-500" />}
-                      {job.status === 'Offer Received' && <Award className="h-4 w-4 text-green-500" />}
-                      {job.status === 'Rejected' && <X className="h-4 w-4 text-red-500" />}
-                      {job.status === 'Saved' && <CheckCircle className="h-4 w-4 text-purple-500" />}
-                    </div>
                   </div>
-                </div>
-              ))}
+                ))
+              ) : (
+                <div className="text-center py-4 text-muted-foreground">No applications found. Start tracking your job applications!</div>
+              )}
             </CardContent>
             <CardFooter>
               <Button variant="ghost" size="sm" asChild className="ml-auto">
