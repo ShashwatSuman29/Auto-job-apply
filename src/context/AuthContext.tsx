@@ -7,6 +7,7 @@ interface User {
   email: string;
   title?: string;
   skills?: string[];
+  profilePhoto?: string;
 }
 
 interface AuthContextType {
@@ -19,6 +20,7 @@ interface AuthContextType {
   logout: () => void;
   refreshToken: () => Promise<string | null>;
   error: string | null;
+  updateProfilePhoto: (photoUrl: string) => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -132,6 +134,29 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
     }
   };
 
+  // Update profile photo
+  const updateProfilePhoto = async (photoUrl: string) => {
+    if (!token || !user) throw new Error('Not authenticated');
+    
+    try {
+      const res = await axios.put(
+        `${API_URL}/auth/profile-photo`,
+        { photoUrl },
+        {
+          headers: {
+            'x-auth-token': token
+          }
+        }
+      );
+      
+      setUser({ ...user, profilePhoto: photoUrl });
+    } catch (err: any) {
+      console.error('Error updating profile photo:', err);
+      setError(err.response?.data?.error || 'Failed to update profile photo');
+      throw new Error(err.response?.data?.error || 'Failed to update profile photo');
+    }
+  };
+
   // Logout user
   const logout = () => {
     localStorage.removeItem('token');
@@ -150,7 +175,8 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
         register,
         logout,
         refreshToken,
-        error
+        error,
+        updateProfilePhoto
       }}
     >
       {children}

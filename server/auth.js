@@ -144,7 +144,8 @@ router.get('/me', async (req, res) => {
       name: user.name,
       email: user.email,
       title: user.title || '',
-      skills: user.skills || []
+      skills: user.skills || [],
+      profilePhoto: user.profilePhoto || ''
     });
   } catch (error) {
     console.error('Error getting current user:', error);
@@ -224,6 +225,66 @@ router.put('/profile', async (req, res) => {
   } catch (error) {
     console.error('Error updating profile:', error);
     res.status(500).json({ error: 'Failed to update profile' });
+  }
+});
+
+// Update user profile photo
+router.put('/profile-photo', async (req, res) => {
+  try {
+    // Get token from header
+    const token = req.header('x-auth-token');
+    
+    if (!token) {
+      return res.status(401).json({ error: 'No token, authorization denied' });
+    }
+
+    // Verify token
+    const decoded = jwt.verify(token, JWT_SECRET);
+    
+    const { photoUrl } = req.body;
+    
+    if (!photoUrl) {
+      return res.status(400).json({ error: 'Photo URL is required' });
+    }
+    
+    console.log('Updating profile photo for user:', decoded.id);
+    
+    const db = await connectToDatabase();
+    
+    // Update user profile photo
+    const result = await db.collection('users').updateOne(
+      { _id: new ObjectId(decoded.id) },
+      { $set: { 
+          profilePhoto: photoUrl,
+          updatedAt: new Date()
+        } 
+      }
+    );
+    
+    if (result.matchedCount === 0) {
+      console.error('User not found for ID:', decoded.id);
+      return res.status(404).json({ error: 'User not found' });
+    }
+    
+    console.log('Profile photo updated successfully for user:', decoded.id);
+    
+    // Get updated user
+    const updatedUser = await db.collection('users').findOne({ _id: new ObjectId(decoded.id) });
+    
+    res.json({
+      id: updatedUser._id.toString(),
+      name: updatedUser.name,
+      email: updatedUser.email,
+      title: updatedUser.title || '',
+      skills: updatedUser.skills || [],
+      profilePhoto: updatedUser.profilePhoto || ''
+    });
+  } catch (error) {
+    console.error('Error updating profile photo:', error.message);
+    if (error.name === 'JsonWebTokenError') {
+      return res.status(401).json({ error: 'Token is not valid' });
+    }
+    res.status(500).json({ error: `Failed to update profile photo: ${error.message}` });
   }
 });
 

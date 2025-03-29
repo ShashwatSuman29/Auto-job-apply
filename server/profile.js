@@ -240,4 +240,64 @@ router.get('/resume/:filename', auth, (req, res) => {
     }
 });
 
+// Update profile photo
+router.put('/photo', auth, async (req, res) => {
+    try {
+        const { photoUrl } = req.body;
+        
+        if (!photoUrl) {
+            return res.status(400).json({ error: 'Photo URL is required' });
+        }
+        
+        console.log('Updating profile photo for user:', req.user.id);
+        
+        const db = await connectToDatabase();
+        
+        // Update user's profile photo in the users collection
+        const userResult = await db.collection('users').updateOne(
+            { _id: new ObjectId(req.user.id) },
+            { 
+                $set: { 
+                    profilePhoto: photoUrl,
+                    updatedAt: new Date()
+                } 
+            }
+        );
+        
+        if (userResult.matchedCount === 0) {
+            console.error('User not found for ID:', req.user.id);
+            return res.status(404).json({ error: 'User not found' });
+        }
+        
+        // Also update the user profile if it exists
+        await db.collection('userProfiles').updateOne(
+            { userId: req.user.id },
+            { 
+                $set: { 
+                    profilePhoto: photoUrl,
+                    updatedAt: new Date()
+                } 
+            },
+            { upsert: true }
+        );
+        
+        console.log('Profile photo updated successfully for user:', req.user.id);
+        
+        // Get updated user
+        const updatedUser = await db.collection('users').findOne({ _id: new ObjectId(req.user.id) });
+        
+        res.json({
+            id: updatedUser._id.toString(),
+            name: updatedUser.name,
+            email: updatedUser.email,
+            title: updatedUser.title || '',
+            skills: updatedUser.skills || [],
+            profilePhoto: updatedUser.profilePhoto || ''
+        });
+    } catch (error) {
+        console.error('Error updating profile photo:', error.message);
+        res.status(500).json({ error: `Failed to update profile photo: ${error.message}` });
+    }
+});
+
 export default router;

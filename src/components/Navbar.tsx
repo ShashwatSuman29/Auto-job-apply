@@ -14,6 +14,7 @@ import { searchJobApplications, JobSearchParams } from '@/lib/api';
 import { Badge } from '@/components/ui/badge';
 import { Card } from '@/components/ui/card';
 import { JobApplication } from '@/utils/types';
+import ProfilePhotoUpload from './ProfilePhotoUpload';
 
 interface NavbarProps {
   isSidebarOpen: boolean;
@@ -273,10 +274,7 @@ const Navbar = ({ isSidebarOpen, toggleSidebar }: NavbarProps) => {
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
                   <Button variant="ghost" className="relative h-10 w-10 rounded-full">
-                    <Avatar className="h-9 w-9">
-                      <AvatarImage src="https://github.com/shadcn.png" alt="User" />
-                      <AvatarFallback>{user?.name?.substring(0, 2) || 'US'}</AvatarFallback>
-                    </Avatar>
+                    <ProfilePhotoUpload size="sm" />
                   </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end">

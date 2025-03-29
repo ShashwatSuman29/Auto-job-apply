@@ -17,6 +17,7 @@ import { UserSettings, UserProfile } from '@/utils/types';
 import { useToast } from '@/components/ui/use-toast';
 import { useAuth } from '@/context/AuthContext';
 import { getUserProfile, updateUserProfile, uploadResume, deleteResume, updateUserSettings, getUserSettings } from '@/lib/api';
+import ProfilePhotoUpload from '@/components/ProfilePhotoUpload';
 
 const Settings = () => {
   const { theme, colorScheme, toggleTheme, setColorScheme } = useTheme();
@@ -366,20 +367,8 @@ const Settings = () => {
             <CardContent>
               <form onSubmit={updateProfile} className="space-y-6">
                 <div className="flex flex-col md:flex-row gap-4 md:items-center">
-                  <div className="relative w-24 h-24 rounded-full bg-muted flex items-center justify-center overflow-hidden border">
-                    {profile.profilePictureUrl ? (
-                      <img 
-                        src={profile.profilePictureUrl} 
-                        alt={profile.name} 
-                        className="w-full h-full object-cover"
-                      />
-                    ) : (
-                      <User className="h-12 w-12 text-muted-foreground" />
-                    )}
-                    
-                    <Button size="icon" variant="secondary" className="absolute bottom-0 right-0 h-8 w-8 rounded-full">
-                      <Upload className="h-4 w-4" />
-                    </Button>
+                  <div className="relative w-24 h-24 rounded-full overflow-hidden">
+                    <ProfilePhotoUpload onPhotoUpdated={fetchUserProfile} />
                   </div>
                   
                   <div className="space-y-1 flex-1">
