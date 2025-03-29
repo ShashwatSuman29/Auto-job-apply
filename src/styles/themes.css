@@ -1,0 +1,114 @@
+/* Theme CSS Variables */
+
+/* Default Theme */
+.theme-default {
+  --primary: 222.2 47.4% 11.2%;
+  --primary-foreground: 210 40% 98%;
+  
+  --secondary: 210 40% 96.1%;
+  --secondary-foreground: 222.2 47.4% 11.2%;
+  
+  --accent: 210 40% 96.1%;
+  --accent-foreground: 222.2 47.4% 11.2%;
+  
+  --destructive: 0 84.2% 60.2%;
+  --destructive-foreground: 210 40% 98%;
+  
+  --ring: 222.2 47.4% 11.2%;
+}
+
+/* Purple Theme */
+.theme-purple {
+  --primary: 270 50% 40%;
+  --primary-foreground: 210 40% 98%;
+  
+  --secondary: 270 30% 96.1%;
+  --secondary-foreground: 270 50% 40%;
+  
+  --accent: 270 30% 96.1%;
+  --accent-foreground: 270 50% 40%;
+  
+  --destructive: 0 84.2% 60.2%;
+  --destructive-foreground: 210 40% 98%;
+  
+  --ring: 270 50% 40%;
+}
+
+/* Blue Theme */
+.theme-blue {
+  --primary: 217 91% 60%;
+  --primary-foreground: 210 40% 98%;
+  
+  --secondary: 214 32% 91%;
+  --secondary-foreground: 217 91% 60%;
+  
+  --accent: 214 32% 91%;
+  --accent-foreground: 217 91% 60%;
+  
+  --destructive: 0 84.2% 60.2%;
+  --destructive-foreground: 210 40% 98%;
+  
+  --ring: 217 91% 60%;
+}
+
+/* Green Theme */
+.theme-green {
+  --primary: 142 71% 45%;
+  --primary-foreground: 210 40% 98%;
+  
+  --secondary: 142 42% 95%;
+  --secondary-foreground: 142 71% 45%;
+  
+  --accent: 142 42% 95%;
+  --accent-foreground: 142 71% 45%;
+  
+  --destructive: 0 84.2% 60.2%;
+  --destructive-foreground: 210 40% 98%;
+  
+  --ring: 142 71% 45%;
+}
+
+/* Dark Mode Adjustments */
+.dark.theme-default {
+  --primary: 210 40% 98%;
+  --primary-foreground: 222.2 47.4% 11.2%;
+  
+  --secondary: 217.2 32.6% 17.5%;
+  --secondary-foreground: 210 40% 98%;
+  
+  --accent: 217.2 32.6% 17.5%;
+  --accent-foreground: 210 40% 98%;
+}
+
+.dark.theme-purple {
+  --primary: 270 70% 70%;
+  --primary-foreground: 222.2 47.4% 11.2%;
+  
+  --secondary: 270 30% 20%;
+  --secondary-foreground: 270 70% 70%;
+  
+  --accent: 270 30% 20%;
+  --accent-foreground: 270 70% 70%;
+}
+
+.dark.theme-blue {
+  --primary: 217 91% 70%;
+  --primary-foreground: 222.2 47.4% 11.2%;
+  
+  --secondary: 214 32% 20%;
+  --secondary-foreground: 217 91% 70%;
+  
+  --accent: 214 32% 20%;
+  --accent-foreground: 217 91% 70%;
+}
+
+.dark.theme-green {
+  --primary: 142 71% 55%;
+  --primary-foreground: 222.2 47.4% 11.2%;
+  
+  --secondary: 142 42% 20%;
+  --secondary-foreground: 142 71% 55%;
+  
+  --accent: 142 42% 20%;
+  --accent-foreground: 142 71% 55%;
+}

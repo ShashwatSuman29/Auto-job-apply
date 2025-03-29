@@ -1,11 +1,13 @@
-
 import React, { createContext, useContext, useEffect, useState } from 'react';
 
 type Theme = 'dark' | 'light';
+type ColorScheme = 'default' | 'purple' | 'blue' | 'green';
 
 interface ThemeContextType {
   theme: Theme;
+  colorScheme: ColorScheme;
   toggleTheme: () => void;
+  setColorScheme: (scheme: ColorScheme) => void;
 }
 
 const ThemeContext = createContext<ThemeContextType | undefined>(undefined);
@@ -18,6 +20,11 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
     return savedTheme || systemPreference;
   });
 
+  const [colorScheme, setColorScheme] = useState<ColorScheme>(() => {
+    // Initialize from localStorage or default to 'default'
+    return (localStorage.getItem('colorScheme') as ColorScheme) || 'default';
+  });
+
   useEffect(() => {
     // Update localStorage and document class when theme changes
     localStorage.setItem('theme', theme);
@@ -27,12 +34,21 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
     root.classList.add(theme);
   }, [theme]);
 
+  useEffect(() => {
+    // Update localStorage and document class when color scheme changes
+    localStorage.setItem('colorScheme', colorScheme);
+    
+    const root = window.document.documentElement;
+    root.classList.remove('theme-default', 'theme-purple', 'theme-blue', 'theme-green');
+    root.classList.add(`theme-${colorScheme}`);
+  }, [colorScheme]);
+
   const toggleTheme = () => {
     setTheme(prevTheme => prevTheme === 'dark' ? 'light' : 'dark');
   };
 
   return (
-    <ThemeContext.Provider value={{ theme, toggleTheme }}>
+    <ThemeContext.Provider value={{ theme, colorScheme, toggleTheme, setColorScheme }}>
       {children}
     </ThemeContext.Provider>
   );

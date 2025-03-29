@@ -19,7 +19,7 @@ import { useAuth } from '@/context/AuthContext';
 import { getUserProfile, updateUserProfile, uploadResume, deleteResume, updateUserSettings, getUserSettings } from '@/lib/api';
 
 const Settings = () => {
-  const { theme, toggleTheme } = useTheme();
+  const { theme, colorScheme, toggleTheme, setColorScheme } = useTheme();
   const { toast } = useToast();
   const { isAuthenticated, user } = useAuth();
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -207,6 +207,14 @@ const Settings = () => {
       ...prev,
       darkMode: !prev.darkMode,
     }));
+  };
+  
+  const handleColorSchemeChange = (scheme: 'default' | 'purple' | 'blue' | 'green') => {
+    setColorScheme(scheme);
+    toast({
+      title: "Theme Updated",
+      description: `Color scheme changed to ${scheme}`,
+    });
   };
   
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -697,42 +705,46 @@ const Settings = () => {
                   />
                 </div>
                 
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                   <div 
-                    className={`border rounded-lg p-4 cursor-pointer hover:border-primary transition-colors ${theme === 'light' ? 'border-primary' : ''}`}
-                    onClick={() => {
-                      if (theme !== 'light') toggleTheme();
-                    }}
+                    className={`border rounded-lg p-4 cursor-pointer hover:border-primary transition-colors ${
+                      colorScheme === 'default' ? 'border-primary ring-2 ring-primary ring-offset-2' : ''
+                    }`}
+                    onClick={() => handleColorSchemeChange('default')}
                   >
-                    <div className="bg-white border rounded-md p-2 mb-2">
-                      <div className="w-full h-2 bg-gray-200 rounded mb-1" />
-                      <div className="w-2/3 h-2 bg-gray-200 rounded" />
-                    </div>
-                    <span className="text-sm font-medium">Light</span>
+                    <div className="bg-primary/20 h-12 rounded-md mb-2"></div>
+                    <span className="text-sm font-medium">Default</span>
                   </div>
                   
                   <div 
-                    className={`border rounded-lg p-4 cursor-pointer hover:border-primary transition-colors ${theme === 'dark' ? 'border-primary' : ''}`}
-                    onClick={() => {
-                      if (theme !== 'dark') toggleTheme();
-                    }}
+                    className={`border rounded-lg p-4 cursor-pointer hover:border-purple-500 transition-colors ${
+                      colorScheme === 'purple' ? 'border-purple-500 ring-2 ring-purple-500 ring-offset-2' : ''
+                    }`}
+                    onClick={() => handleColorSchemeChange('purple')}
                   >
-                    <div className="bg-gray-900 border border-gray-700 rounded-md p-2 mb-2">
-                      <div className="w-full h-2 bg-gray-700 rounded mb-1" />
-                      <div className="w-2/3 h-2 bg-gray-700 rounded" />
-                    </div>
-                    <span className="text-sm font-medium">Dark</span>
+                    <div className="bg-purple-500/20 h-12 rounded-md mb-2"></div>
+                    <span className="text-sm font-medium">Purple</span>
                   </div>
-                </div>
-              </div>
-              
-              <div className="space-y-4">
-                <h3 className="text-lg font-medium">Color Scheme</h3>
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                  <Badge className="border border-primary block px-8 py-6 rounded-lg bg-primary/20 text-center">Default</Badge>
-                  <Badge className="border block px-8 py-6 rounded-lg bg-purple-500/20 text-center" variant="outline">Purple</Badge>
-                  <Badge className="border block px-8 py-6 rounded-lg bg-blue-500/20 text-center" variant="outline">Blue</Badge>
-                  <Badge className="border block px-8 py-6 rounded-lg bg-green-500/20 text-center" variant="outline">Green</Badge>
+                  
+                  <div 
+                    className={`border rounded-lg p-4 cursor-pointer hover:border-blue-500 transition-colors ${
+                      colorScheme === 'blue' ? 'border-blue-500 ring-2 ring-blue-500 ring-offset-2' : ''
+                    }`}
+                    onClick={() => handleColorSchemeChange('blue')}
+                  >
+                    <div className="bg-blue-500/20 h-12 rounded-md mb-2"></div>
+                    <span className="text-sm font-medium">Blue</span>
+                  </div>
+                  
+                  <div 
+                    className={`border rounded-lg p-4 cursor-pointer hover:border-green-500 transition-colors ${
+                      colorScheme === 'green' ? 'border-green-500 ring-2 ring-green-500 ring-offset-2' : ''
+                    }`}
+                    onClick={() => handleColorSchemeChange('green')}
+                  >
+                    <div className="bg-green-500/20 h-12 rounded-md mb-2"></div>
+                    <span className="text-sm font-medium">Green</span>
+                  </div>
                 </div>
               </div>
             </CardContent>
