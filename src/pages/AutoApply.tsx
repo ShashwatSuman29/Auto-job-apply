@@ -156,9 +156,10 @@ const JobSearch = () => {
     try {
       setIsLoadingJobs(true);
       const listings = await fetchJobListings(jobSearchQuery, jobSearchLocation, jobSource);
-      setJobListings(listings);
+      setJobListings(listings || []); // Ensure we always set an array even if the API returns null
     } catch (error) {
       console.error('Error loading job listings:', error);
+      setJobListings([]); // Set empty array on error
       toast({
         title: 'Error',
         description: 'Failed to load job listings. Please try again.',
@@ -442,6 +443,15 @@ const JobSearch = () => {
   };
 
   const renderSessionStats = (session: AutoApplySession) => {
+    // Add null check to ensure session and session.stats exist
+    if (!session || !session.stats) {
+      return (
+        <div className="text-center py-4">
+          <p>No session statistics available</p>
+        </div>
+      );
+    }
+    
     return (
       <div className="grid grid-cols-3 gap-4 mb-4">
         <Card>
@@ -479,6 +489,15 @@ const JobSearch = () => {
   };
 
   const renderSessionDetails = (session: AutoApplySession) => {
+    // Add null check to ensure session exists
+    if (!session) {
+      return (
+        <div className="text-center py-4">
+          <p>No session details available</p>
+        </div>
+      );
+    }
+    
     return (
       <Card className="mb-4">
         <CardHeader>
@@ -503,11 +522,11 @@ const JobSearch = () => {
               <div className="grid grid-cols-2 gap-2">
                 <div>
                   <p className="text-sm font-medium">Keywords:</p>
-                  <p className="text-sm text-muted-foreground">{session.searchCriteria.keywords}</p>
+                  <p className="text-sm text-muted-foreground">{session.searchCriteria?.keywords || 'N/A'}</p>
                 </div>
                 <div>
                   <p className="text-sm font-medium">Location:</p>
-                  <p className="text-sm text-muted-foreground">{session.searchCriteria.location}</p>
+                  <p className="text-sm text-muted-foreground">{session.searchCriteria?.location || 'N/A'}</p>
                 </div>
               </div>
             </div>
@@ -868,7 +887,7 @@ const JobSearch = () => {
                 </div>
               </CardHeader>
               <CardContent className="space-y-4">
-                {renderSessionStats(activeSession)}
+                {activeSession.stats && renderSessionStats(activeSession)}
                 
                 {activeSession.status === 'running' && (
                   <Button 
@@ -925,19 +944,19 @@ const JobSearch = () => {
                           </p>
                         </div>
                         <div className="text-right">
-                          <p className="text-sm font-medium">{session.stats.applicationsSubmitted} Applied</p>
-                          <p className="text-xs text-muted-foreground">{session.stats.jobsFound} Jobs Found</p>
+                          <p className="text-sm font-medium">{session.stats?.applicationsSubmitted || 0} Applied</p>
+                          <p className="text-xs text-muted-foreground">{session.stats?.jobsFound || 0} Jobs Found</p>
                         </div>
                       </div>
                       
                       <div className="grid grid-cols-2 gap-2 text-sm">
                         <div className="flex items-center">
                           <Briefcase className="h-4 w-4 mr-1 text-muted-foreground" />
-                          <span className="truncate">{session.searchCriteria.keywords}</span>
+                          <span className="truncate">{session.searchCriteria?.keywords || 'N/A'}</span>
                         </div>
                         <div className="flex items-center">
                           <MapPin className="h-4 w-4 mr-1 text-muted-foreground" />
-                          <span className="truncate">{session.searchCriteria.location}</span>
+                          <span className="truncate">{session.searchCriteria?.location || 'N/A'}</span>
                         </div>
                       </div>
                       
@@ -945,7 +964,7 @@ const JobSearch = () => {
                         <span>Duration: {
                           Math.round((new Date(session.endTime || session.startTime).getTime() - new Date(session.startTime).getTime()) / 60000)
                         } minutes</span>
-                        <span>{session.logs.length} log entries</span>
+                        <span>{session.logs?.length || 0} log entries</span>
                       </div>
                     </div>
                   ))}
